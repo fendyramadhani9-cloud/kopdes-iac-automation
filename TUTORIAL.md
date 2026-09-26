@@ -30,7 +30,7 @@ Dengan menggunakan template **Alpine Linux** (`Alpine-virt x86_64, ~145 MB`), be
 - **Prosesor**: Minimal 2 Core Fisik (4 Thread), fitur virtualisasi VT-x / AMD-V aktif di BIOS/UEFI
 - **Memori RAM**: Minimal 8 GB (seluruh 4 VM kluster hanya membutuhkan total ~2 GB RAM)
 - **Ruang Penyimpanan**: Minimal 10 GB ruang kosong pada media SSD / HDD
-- **File Template Base**: `Alpine-virt-3.24.1-x86_64-v1_root-root_al...` (ukuran file ~145 MB)
+- **File Template Base**: `D:\Virtual Machines\ISO\Alpine-virt-3.24.1-x86_64-v1_root-root_alpine-alpine.ova` (ukuran file ~142 MB)
 
 ### Kebutuhan Environment Controller
 Perintah otomasi (Git, Terraform, Ansible) dijalankan dari Controller (dapat berupa VM Linux seperti Ubuntu di VMware, WSL2, atau mesin Controller Linux terdedikasi):
@@ -57,16 +57,16 @@ Terraform menggunakan satu Virtual Machine referensi (Base VM) sebagai sumber cl
 
 ### 2.1 Import File Template OVA Alpine
 1. Buka **VMware Workstation Pro**.
-2. Pilih menu **File > Open**, arahkan ke file OVA `Alpine-virt-3.24.1-x86_64-v1_root-root...` (~145 MB).
-3. Beri nama Virtual Machine (misalnya `Alpine-Base-VM`) dan tentukan direktori penyimpanannya.
+2. Pilih menu **File > Open**, arahkan ke file OVA:
+   `D:\Virtual Machines\ISO\Alpine-virt-3.24.1-x86_64-v1_root-root_alpine-alpine.ova`
+3. Beri nama Virtual Machine (misalnya `Alpine-Base-VM`) dan tentukan direktori penyimpanannya (misalnya `D:\Virtual Machines\Alpine-Base-VM`).
 4. Sesuaikan Network Adapter VM:
    - Arahkan ke virtual network yang ditentukan (misalnya Host-Only `VMnet1` atau NAT `VMnet8`).
 
 ### 2.2 Booting dan Verifikasi Akses SSH Base VM
 1. Nyalakan Base VM.
-2. Masuk melalui konsol VMware dengan kredensial default:
-   - **Username**: `root`
-   - **Password**: `root` (atau `alpine` sesuai penamaan OVA)
+2. Masuk melalui konsol VMware dengan kredensial default yang tertera pada nama OVA:
+   - **Username**: `root` | **Password**: `root` (atau user `alpine` | password `alpine`)
 3. Pastikan service SSH (OpenSSH) aktif dan otomatis berjalan saat booting:
    ```sh
    rc-update add sshd default
@@ -187,7 +187,10 @@ vmrest_password = "PasswordKopdes2025!"
 base_vm_id = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
 
 # Direktori penyimpanan file VM hasil clone pada disk Host
-vm_target_path = "D:\\VirtualMachines\\KopDes-Cluster"
+vm_target_dir = "D:\\Virtual Machines\\KopDes"
+
+# Alokasi RAM per VM
+vm_memory_mb = 512
 ```
 
 Simpan file (`Ctrl+O`, `Enter`, `Ctrl+X`).

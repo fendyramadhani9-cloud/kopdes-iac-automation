@@ -22,9 +22,9 @@ vmws_https    = false
 # ID VM Base yang akan di-clone oleh Terraform
 # Cek ID dengan: curl -u admin:password http://192.168.X.1:8697/api/vms
 # =====================================================
-base_vm_id    = "BASE-WINDOWS-VM"
-vm_target_dir = "C:\\VMs\\KopDes"
+base_vm_id    = "BASE-ALPINE-VM"
+vm_target_dir = "D:\\Virtual Machines\\KopDes"
 
-# Alokasi Resource Ringan (Cocok untuk Lab Sekolah)
+# Alokasi Resource Ringan (Optimal untuk Alpine Linux)
 vm_processors = 1
-vm_memory_mb  = 1024
+vm_memory_mb  = 512
