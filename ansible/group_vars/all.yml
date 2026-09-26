@@ -1,0 +1,44 @@
+# ==============================================================================
+# ANSIBLE GLOBAL VARIABLES: KOPDES AUTOMATION LAYER
+# ==============================================================================
+
+# =====================================================
+# WAJIB DIUBAH SISWA
+# GANTI X / NOMOR ABSEN SESUAI ABSEN ANDA
+# =====================================================
+student_id: 17
+network_prefix: "192.168.{{ student_id }}"
+
+# Alokasi IP Statis 4 Target VM
+haproxy_ip: "{{ network_prefix }}.10"
+web01_ip: "{{ network_prefix }}.11"
+web02_ip: "{{ network_prefix }}.12"
+database_ip: "{{ network_prefix }}.13"
+
+# =====================================================
+# Database Configuration (Sesuai existing KopDes schema)
+# =====================================================
+db_host: "{{ database_ip }}"
+db_port: 3306
+db_name: kopdes
+db_user: kopdes_user
+db_password: PasswordKopdes2025!
+db_root_password: PasswordKopdes2025!
+
+# =====================================================
+# KopDes Application Information
+# =====================================================
+app_name: "KopDes Merah Putih"
+kopdes_name: "KopDes Merah Putih (Unit Absen {{ student_id }})"
+kopdes_location: "Desa Digital Wilayah {{ student_id }}"
+app_env: production
+app_debug: false
+
+# =====================================================
+# Windows Target Paths
+# =====================================================
+app_dest_dir: "C:\\kopdes"
+php_dest_dir: "C:\\php"
+haproxy_dest_dir: "C:\\haproxy"
+tools_dir: "C:\\tools"
+cache_dir: "C:\\tools\\cache"

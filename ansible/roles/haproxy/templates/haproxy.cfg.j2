@@ -1,0 +1,51 @@
+# ==============================================================================
+# HAProxy Configuration: KopDes Round Robin Load Balancer
+# ==============================================================================
+
+global
+    log 127.0.0.1 local2
+    maxconn 4096
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    retries 3
+    timeout connect 5000ms
+    timeout client  50000ms
+    timeout server  50000ms
+
+# Frontend: Menerima Traffic Web HTTP dari Browser Klien / Siswa
+frontend kopdes_frontend
+    bind *:80
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Proto http
+    http-request set-header X-Forwarded-Host %[req.hdr(host)]
+    default_backend kopdes_backend
+
+# Backend: Distribusi Beban Bergantian (Round Robin) ke Web01 & Web02
+backend kopdes_backend
+    mode http
+    balance roundrobin
+    # Health check aktif ke endpoint login KopDes
+    option httpchk GET /index.php?page=login HTTP/1.1\r\nHost:\ localhost
+    http-check expect status 200
+
+    # Definisi 2 Web Server Node (inter 2000ms, gagal setelah 2x timeout)
+    server web01 {{ web01_ip }}:80 check inter 2000ms fall 2 rise 2
+    server web02 {{ web02_ip }}:80 check inter 2000ms fall 2 rise 2
+
+# ==============================================================================
+# Dashboard Monitoring Status Kluster (Stats Page untuk Guru & Siswa)
+# Buka di browser: http://192.168.X.10:8404/
+# ==============================================================================
+listen stats
+    bind *:8404
+    mode http
+    stats enable
+    stats uri /
+    stats refresh 3s
+    stats show-node
+    stats title "KopDes HAProxy Cluster Status (Lab Absen {{ student_id }})"

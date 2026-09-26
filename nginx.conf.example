@@ -1,0 +1,64 @@
+# =====================================================
+# KopDes - Nginx Server Configuration (Alpine Linux)
+# Lokasi file pada Alpine: /etc/nginx/http.d/kopdes.conf
+# =====================================================
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    # Direktori root menunjuk ke folder public
+    root /var/www/kopdes/public;
+    index index.php index.html;
+
+    # Logging
+    access_log /var/log/nginx/kopdes_access.log;
+    error_log  /var/log/nginx/kopdes_error.log warn;
+
+    # Pengaturan Real IP dari HAProxy Load Balancer
+    # Ganti X dengan nomor absen Anda jika diperlukan
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    # Routing Front-Controller
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Penanganan Skrip PHP melalui PHP-FPM
+    location ~ \.php$ {
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        
+        # PHP-FPM default di Alpine Linux (port 9000 atau unix socket)
+        fastcgi_pass 127.0.0.1:9000;
+        # Alternatif jika menggunakan socket:
+        # fastcgi_pass unix:/run/php-fpm82.sock;
+
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+
+        # Optimasi Buffer
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 4 256k;
+        fastcgi_busy_buffers_size 256k;
+    }
+
+    # Blokir akses langsung ke file sensitif (.env, .git, .sql)
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    location ~* \.(sql|env|log|md|sh)$ {
+        deny all;
+    }
+
+    # Cache file statis (CSS, JS, Fonts, Images)
+    location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf)$ {
+        expires 7d;
+        add_header Cache-Control "public, no-transform";
+    }
+}

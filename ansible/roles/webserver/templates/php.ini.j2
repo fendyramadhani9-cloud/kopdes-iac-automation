@@ -1,0 +1,51 @@
+; ==============================================================================
+; PHP Configuration for KopDes Web Server
+; ==============================================================================
+
+[PHP]
+engine = On
+short_open_tag = On
+precision = 14
+output_buffering = 4096
+zlib.output_compression = Off
+implicit_flush = Off
+serialize_precision = -1
+
+max_execution_time = 60
+max_input_time = 60
+memory_limit = 256M
+
+error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+display_errors = Off
+display_startup_errors = Off
+log_errors = On
+
+post_max_size = 20M
+upload_max_filesize = 10M
+default_socket_timeout = 60
+
+; Extensions Directory
+extension_dir = "ext"
+
+; Required Extensions for KopDes
+extension=curl
+extension=mbstring
+extension=openssl
+extension=pdo_mysql
+
+[Date]
+date.timezone = "Asia/Jakarta"
+
+[Session]
+session.save_handler = files
+session.use_strict_mode = 0
+session.use_cookies = 1
+session.use_only_cookies = 1
+session.name = KOPDESSESSID
+session.auto_start = 0
+session.cookie_lifetime = 0
+session.cookie_path = /
+session.serialize_handler = php
+session.gc_probability = 1
+session.gc_divisor = 1000
+session.gc_maxlifetime = 7200

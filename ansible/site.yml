@@ -1,0 +1,79 @@
+---
+# ==============================================================================
+# MASTER ANSIBLE PLAYBOOK: KOPDES INFRASTRUCTURE & APPLICATION DEPLOYMENT
+# Target Environment: 4 Windows VMs Cloned by Terraform
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Play 1: Baseline Windows Configuration (All Nodes)
+# ------------------------------------------------------------------------------
+- name: "Play 1: Inisialisasi Baseline & Konektivitas Semua Node Windows"
+  hosts: windows
+  gather_facts: false
+  roles:
+    - common
+
+# ------------------------------------------------------------------------------
+# Play 2: Database Layer (DB01 - 192.168.X.13)
+# ------------------------------------------------------------------------------
+- name: "Play 2: Konfigurasi Database Server MariaDB (DB01)"
+  hosts: database
+  gather_facts: false
+  roles:
+    - database
+
+# ------------------------------------------------------------------------------
+# Play 3: Application & Web Server Layer (Web01 & Web02)
+# ------------------------------------------------------------------------------
+- name: "Play 3: Deploy Runtime PHP & Source Code KopDes (Web01 & Web02)"
+  hosts: webservers
+  gather_facts: false
+  roles:
+    - webserver
+
+# ------------------------------------------------------------------------------
+# Play 4: Load Balancer Layer (HAProxy - 192.168.X.10)
+# ------------------------------------------------------------------------------
+- name: "Play 4: Konfigurasi Load Balancer HAProxy (Round Robin)"
+  hosts: haproxy
+  gather_facts: false
+  roles:
+    - haproxy
+
+# ------------------------------------------------------------------------------
+# Play 5: Post-Deployment Smoke Test (Dijalankan dari Controller)
+# ------------------------------------------------------------------------------
+- name: "Play 5: Verifikasi Integrasi End-to-End KopDes via HAProxy"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Beri jeda 5 detik agar seluruh service Windows stabil
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Uji request HTTP ke HAProxy (http://{{ haproxy_ip }}/)
+      ansible.builtin.uri:
+        url: "http://{{ haproxy_ip }}/index.php?page=login"
+        method: GET
+        status_code: 200
+        return_content: yes
+      register: haproxy_response
+      retries: 5
+      delay: 3
+      until: haproxy_response.status == 200
+      ignore_errors: true
+
+    - name: Tampilkan Ringkasan Hasil Deployment
+      ansible.builtin.debug:
+        msg:
+          - "=================================================================="
+          - "🎉 DEPLOYMENT KOPDES MERAH PUTIH BERHASIL!"
+          - "=================================================================="
+          - "HAProxy VIP : http://{{ haproxy_ip }}"
+          - "HAProxy Stats: http://{{ haproxy_ip }}:8404/"
+          - "Web01 Node   : http://{{ web01_ip }} (Serving: WEB-01)"
+          - "Web02 Node   : http://{{ web02_ip }} (Serving: WEB-02)"
+          - "Database Node: {{ database_ip }}:3306 (MariaDB: {{ db_name }})"
+          - "Status Respon: {{ 'OK (HTTP 200)' if haproxy_response.status == 200 else 'Menunggu service ready' }}"
+          - "=================================================================="

@@ -1,0 +1,22 @@
+-- =============================================================================
+-- Inisialisasi Database KopDes & Akses Terbatas untuk Web01 & Web02
+-- =============================================================================
+
+CREATE DATABASE IF NOT EXISTS `{{ db_name }}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Akses aman khusus dari node Web01 ({{ web01_ip }})
+CREATE USER IF NOT EXISTS '{{ db_user }}'@'{{ web01_ip }}' IDENTIFIED BY '{{ db_password }}';
+GRANT ALL PRIVILEGES ON `{{ db_name }}`.* TO '{{ db_user }}'@'{{ web01_ip }}';
+
+-- Akses aman khusus dari node Web02 ({{ web02_ip }})
+CREATE USER IF NOT EXISTS '{{ db_user }}'@'{{ web02_ip }}' IDENTIFIED BY '{{ db_password }}';
+GRANT ALL PRIVILEGES ON `{{ db_name }}`.* TO '{{ db_user }}'@'{{ web02_ip }}';
+
+-- Akses lokal dari node DB01 sendiri
+CREATE USER IF NOT EXISTS '{{ db_user }}'@'localhost' IDENTIFIED BY '{{ db_password }}';
+GRANT ALL PRIVILEGES ON `{{ db_name }}`.* TO '{{ db_user }}'@'localhost';
+
+CREATE USER IF NOT EXISTS '{{ db_user }}'@'127.0.0.1' IDENTIFIED BY '{{ db_password }}';
+GRANT ALL PRIVILEGES ON `{{ db_name }}`.* TO '{{ db_user }}'@'127.0.0.1';
+
+FLUSH PRIVILEGES;

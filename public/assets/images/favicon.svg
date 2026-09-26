@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
+    <!-- Tiang Bendera -->
+    <circle cx="50" cy="10" r="2" fill="#94a3b8" />
+    <line x1="50" y1="10" x2="50" y2="30" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" />
+
+    <!-- Bendera Merah Putih -->
+    <path d="M 28 12 Q 36 7, 42 13 Q 46 16, 50 11 L 50 19 Q 46 24, 42 21 Q 36 15, 28 20 Z" fill="#c81e2b" />
+    <path d="M 28 20 Q 36 15, 42 21 Q 46 24, 50 19 L 50 27 Q 46 32, 42 29 Q 36 23, 28 28 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.5" />
+
+    <!-- Atap Rumah Kiri -->
+    <path d="M 50 30 L 14 56 Q 10 59, 7 56 L 5 54 L 14 47 L 50 22 Z" fill="#c81e2b" />
+
+    <!-- Pilar Atap Kanan -->
+    <path d="M 50 22 L 53 28 L 53 74 Q 53 80, 48 80 L 45 80 Q 45 72, 45 35 Z" fill="#c81e2b" />
+
+    <!-- Dinding Kiri & Pondasi Bawah -->
+    <path d="M 7 56 L 16 56 L 16 88 L 92 88 Q 95 88, 95 91 Q 95 94, 92 94 L 12 94 Q 7 94, 7 89 Z" fill="#c81e2b" />
+
+    <!-- Jendela 4 Kotak -->
+    <rect x="23" y="62" width="7" height="7" rx="1.5" fill="#cbd5e1" />
+    <rect x="33" y="62" width="7" height="7" rx="1.5" fill="#cbd5e1" />
+    <rect x="23" y="72" width="7" height="7" rx="1.5" fill="#cbd5e1" />
+    <rect x="33" y="72" width="7" height="7" rx="1.5" fill="#cbd5e1" />
+</svg>

@@ -1,0 +1,114 @@
+---
+# ==============================================================================
+# Role: Database (MariaDB 10.x on Windows DB01 Node)
+# ==============================================================================
+
+- name: Cek status service MariaDB pada sistem
+  ansible.windows.win_service_info:
+    name: MariaDB
+  register: mariadb_service_check
+
+- name: Siapkan direktori installer MariaDB
+  ansible.windows.win_file:
+    path: "{{ cache_dir }}"
+    state: directory
+
+# Idempotent installation: hanya install jika service MariaDB belum terdaftar
+- name: Salin installer MariaDB dari Controller ke target (jika tersedia lokal)
+  ansible.windows.win_copy:
+    src: "files/mariadb-10.11-winx64.msi"
+    dest: "{{ cache_dir }}\\mariadb.msi"
+  when: not mariadb_service_check.exists
+  ignore_errors: true
+  register: local_msi_copied
+
+- name: Unduh installer MariaDB jika file lokal belum tersedia di Controller
+  ansible.windows.win_shell: |
+    $url = "https://downloads.mariadb.com/MariaDB/mariadb-10.11.8/winx64-packages/mariadb-10.11.8-winx64.msi"
+    $dest = "{{ cache_dir }}\\mariadb.msi"
+    if (-not (Test-Path $dest)) {
+      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+      Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+    }
+  when: not mariadb_service_check.exists and (local_msi_copied is failed or not local_msi_copied.changed)
+
+- name: Install MariaDB secara silent (unattended) sebagai Windows Service
+  ansible.windows.win_package:
+    path: "{{ cache_dir }}\\mariadb.msi"
+    arguments: 'SERVICENAME=MariaDB PORT={{ db_port }} PASSWORD="{{ db_root_password }}" ADDLOCAL=ALL /qn'
+    state: present
+  when: not mariadb_service_check.exists
+
+- name: Pastikan service MariaDB berstatus running dan auto-start
+  ansible.windows.win_service:
+    name: MariaDB
+    state: started
+    start_mode: auto
+
+- name: Izinkan port database (3306) pada Windows Firewall khusus dari Web01 dan Web02
+  ansible.windows.win_firewall_rule:
+    name: "Allow-MariaDB-From-WebServers"
+    localport: "{{ db_port }}"
+    action: allow
+    direction: in
+    protocol: tcp
+    remoteip: "{{ web01_ip }},{{ web02_ip }},127.0.0.1"
+    state: present
+    enabled: yes
+
+- name: Deteksi path binary mysql.exe
+  ansible.windows.win_shell: |
+    $candidates = @(
+      (Get-Item "C:\Program Files\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue).FullName,
+      (Get-Item "C:\tools\mariadb*\bin\mysql.exe" -ErrorAction SilentlyContinue).FullName,
+      "mysql.exe"
+    )
+    foreach ($c in $candidates) {
+      if ($c -and (Test-Path $c)) {
+        return $c
+      }
+    }
+    return "mysql.exe"
+  register: mysql_path_query
+  changed_when: false
+
+- name: Render file inisialisasi SQL database dan hak akses
+  ansible.windows.win_template:
+    src: init_db.sql.j2
+    dest: "{{ tools_dir }}\\init_db.sql"
+  register: init_sql_template
+
+- name: Eksekusi inisialisasi database dan user permissions
+  ansible.windows.win_shell: |
+    $mysql = "{{ mysql_path_query.stdout | trim }}"
+    & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} -e "source {{ tools_dir }}\init_db.sql"
+  when: init_sql_template.changed or not mariadb_service_check.exists
+
+- name: Cek apakah tabel 'kopdes' sudah ada di database (Idempotency Check)
+  ansible.windows.win_shell: |
+    $mysql = "{{ mysql_path_query.stdout | trim }}"
+    $result = & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} -D {{ db_name }} -N -e "SHOW TABLES LIKE 'kopdes';"
+    return $result.Trim()
+  register: kopdes_table_check
+  changed_when: false
+
+- name: Salin schema.sql dan seed.sql dari project KopDes
+  ansible.windows.win_copy:
+    src: "{{ item.src }}"
+    dest: "{{ tools_dir }}\\{{ item.dest }}"
+  loop:
+    - { src: "../database/schema.sql", dest: "schema.sql" }
+    - { src: "../database/seed.sql", dest: "seed.sql" }
+  when: kopdes_table_check.stdout | trim != 'kopdes'
+
+- name: Import skema awal KopDes (schema.sql) secara idempotent
+  ansible.windows.win_shell: |
+    $mysql = "{{ mysql_path_query.stdout | trim }}"
+    & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} {{ db_name }} -e "source {{ tools_dir }}\schema.sql"
+  when: kopdes_table_check.stdout | trim != 'kopdes'
+
+- name: Import data demo awal KopDes (seed.sql) secara idempotent
+  ansible.windows.win_shell: |
+    $mysql = "{{ mysql_path_query.stdout | trim }}"
+    & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} {{ db_name }} -e "source {{ tools_dir }}\seed.sql"
+  when: kopdes_table_check.stdout | trim != 'kopdes'

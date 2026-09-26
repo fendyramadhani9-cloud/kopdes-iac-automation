@@ -1,0 +1,27 @@
+---
+# ==============================================================================
+# Role: Common (Baseline Windows Configuration for All 4 VMs)
+# ==============================================================================
+
+- name: Pastikan direktori kerja dasar ada di target Windows
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ tools_dir }}"
+    - "{{ cache_dir }}"
+
+- name: Aktifkan aturan Windows Firewall untuk ICMP (Ping)
+  ansible.windows.win_firewall_rule:
+    name: "Allow-ICMPv4-In"
+    localport: any
+    action: allow
+    direction: in
+    protocol: icmpv4
+    state: present
+    enabled: yes
+
+- name: Pastikan ExecutionPolicy PowerShell mengizinkan script otomasi
+  ansible.windows.win_shell: |
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
+  changed_when: false

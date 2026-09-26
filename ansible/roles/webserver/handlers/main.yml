@@ -1,0 +1,5 @@
+---
+- name: Restart KopDesWeb
+  ansible.windows.win_service:
+    name: KopDesWeb
+    state: restarted
