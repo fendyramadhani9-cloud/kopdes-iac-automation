@@ -3,7 +3,7 @@
 > **MODUL PEMBELAJARAN & LIVE DEMO PRAKTIKUM DEVOPS**  
 > Proyek ini adalah modul pembelajaran integratif yang menggabungkan:  
 > **VMware Workstation Pro 25H2 + Terraform + Ansible + Git + HAProxy + MariaDB + Aplikasi Nyata KopDes Merah Putih**.  
-> Proyek dirancang untuk kebutuhan lab sekolah/kampus: **ringan, stabil, idempotent, offline-resilient, dan mudah dipresentasikan**.
+> Proyek dirancang untuk kebutuhan lab sekolah/kampus: **ringan, stabil, idempotent, dan mudah dipresentasikan**.
 
 ---
 
@@ -22,9 +22,8 @@
    - [Phase 7: Simulasi Kegagalan (Failure Test)](#phase-7--high-availability-failure-test)
 6. [Catatan Teknis Provider VMware & Keterbatasannya](#-catatan-teknis-provider-vmware--keterbatasannya)
 7. [Target OS Windows, WinRM & Layanan NSSM](#-target-os-windows-winrm--layanan-nssm)
-8. [Ketahanan Jaringan Lab (Offline Package Cache)](#-ketahanan-jaringan-lab-offline-package-cache)
-9. [Akun Demo & Role Aplikasi KopDes](#-akun-demo--role-aplikasi-kopdes)
-10. [Struktur Direktori Lengkap](#-struktur-direktori-lengkap)
+8. [Akun Demo & Role Aplikasi KopDes](#-akun-demo--role-aplikasi-kopdes)
+9. [Struktur Direktori Lengkap](#-struktur-direktori-lengkap)
 
 ---
 
@@ -131,12 +130,15 @@ curl -u admin:PasswordKopdes2025! http://192.168.X.1:8697/api/vms
 ```
 Catat ID VM tersebut, lalu masukkan ke variabel `base_vm_id` pada `terraform/terraform.tfvars`.
 
-### 3. Bootstrap WinRM pada Base VM (Sekali Saja)
-Sebelum Base VM dimatikan untuk dijadikan template clone, jalankan script bootstrap di PowerShell Base VM:
+### 3. Konfigurasi WinRM pada Base VM (Sekali Saja)
+Sebelum Base VM dimatikan untuk dijadikan template clone, jalankan perintah standar di PowerShell (Administrator) Base VM untuk memastikan WinRM dan firewall siap:
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/bootstrap_windows_base_vm.ps1
+winrm quickconfig -q -force
+winrm set winrm/config/service/auth '@{Basic="true"}'
+winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
 ```
-Script ini otomatis membuka port WinRM (5985), firewall HTTP (80), database (3306), ICMP ping, dan menyetel password Administrator standar lab. Setelah selesai, **Shutdown Base VM**.
+Setelah selesai, **Shutdown Base VM**.
 
 ---
 
@@ -148,7 +150,7 @@ Workflow pengujian langsung di hadapan guru / penguji:
 1. Import **Controller OVA** ke VMware Workstation.
 2. Import **Base Windows VM OVA** ke VMware Workstation.
 3. Pastikan `vmrest.exe` aktif di Host.
-4. Jalankan script bootstrap WinRM di Base VM, lalu matikan Base VM.
+4. Pastikan WinRM aktif di Base VM, lalu matikan Base VM.
 
 ### Phase 2 — Git & Repository Setup
 Masuk ke Controller VM melalui terminal/SSH:
@@ -223,9 +225,9 @@ http://192.168.X.10/
    ```
    Kedua backend `web01` dan `web02` berstatus **HIJAU (UP)**.
 
-Atau jalankan skrip verifikasi otomatis dari terminal Controller:
+Uji rotasi Round Robin dari terminal Controller menggunakan curl:
 ```bash
-bash ../scripts/verify_live_demo.sh 17
+for i in {1..4}; do curl -s "http://192.168.X.10/index.php?page=login" | grep -o 'WEB-0[12]'; sleep 1; done
 ```
 
 ### Phase 7 — High Availability Failure Test
@@ -264,28 +266,10 @@ Tunjukkan kepada penguji keandalan sistem saat terjadi insiden server:
 
 * **WinRM Over HTTP (Port 5985)**: Digunakan sebagai media komunikasi Ansible ke Windows tanpa memerlukan SSH daemon tambahan.
 * **NSSM (Non-Sucking Service Manager)**:  
-  Binary portabel seperti `php.exe` (built-in server) dan `haproxy.exe` bukan merupakan *native Windows Service*. Menggunakan `sc.exe` akan menimbulkan `Error 1053`. Oleh karena itu, Ansible menggunakan `nssm.exe` untuk membungkus kedua proses tersebut menjadi Windows Service sejati yang memiliki fitur *auto-restart on failure* dan *start on boot*.
+   Binary portabel seperti `php.exe` (built-in server) dan `haproxy.exe` bukan merupakan *native Windows Service*. Menggunakan `sc.exe` akan menimbulkan `Error 1053`. Oleh karena itu, Ansible menggunakan `nssm.exe` untuk membungkus kedua proses tersebut menjadi Windows Service sejati yang memiliki fitur *auto-restart on failure* dan *start on boot*.
 * **Idempotensi Ansible Playbook**:  
-  - Pemeriksaan `win_service_info` mencegah instalasi ulang paket yang sudah ada.
-  - Skrip inisialisasi MariaDB memeriksa keberadaan tabel `kopdes` sebelum mengeksekusi `schema.sql` dan `seed.sql`, sehingga `ansible-playbook` dapat dijalankan berulang kali dengan status `OK`.
-
----
-
-## 📦 Ketahanan Jaringan Lab (Offline Package Cache)
-
-Di lingkungan lab sekolah dengan koneksi internet terbatas, Anda tidak perlu mengunduh paket dependensi berkali-kali saat presentasi:
-
-Jalankan skrip berikut **sekali saja** di Controller VM sebelum ujian:
-```bash
-bash scripts/prepare_offline_packages.sh
-```
-Skrip ini mengunduh:
-* `php.zip` (PHP 8.2 Windows x64)
-* `mariadb-10.11-winx64.msi`
-* `haproxy.zip` (HAProxy for Windows)
-* `nssm.exe` (NSSM Service Manager)
-
-File-file tersebut disimpan di `ansible/files/`. Saat `ansible-playbook site.yml` dieksekusi, Ansible akan langsung menyalin file dari Controller ke target VM secara lokal melalui jaringan private tanpa menyentuh internet sama sekali.
+   - Pemeriksaan `win_service_info` mencegah instalasi ulang paket yang sudah ada.
+   - Skrip inisialisasi MariaDB memeriksa keberadaan tabel `kopdes` sebelum mengeksekusi `schema.sql` dan `seed.sql`, sehingga `ansible-playbook` dapat dijalankan berulang kali dengan status `OK`.
 
 ---
 
@@ -333,13 +317,6 @@ kopdes/
 │   │       ├── tasks/main.yml
 │   │       ├── handlers/main.yml
 │   │       └── templates/haproxy.cfg.j2
-│   └── files/                         # Tempat cache offline package (NSSM, PHP, MariaDB, HAProxy)
-│
-├── scripts/                           # Helper & Demonstration Scripts
-│   ├── bootstrap_windows_base_vm.ps1  # Script setup WinRM di Base VM
-│   ├── prepare_offline_packages.sh    # Pre-cache paket offline di Controller (Linux/Bash)
-│   ├── prepare_offline_packages.ps1   # Pre-cache paket offline (PowerShell)
-│   └── verify_live_demo.sh            # Skrip otomatisasi pengujian Round Robin & Failure Test
 │
 ├── config/                            # Existing KopDes Configuration (Source of Truth)
 ├── database/                          # Existing KopDes SQL Schema & Seed
@@ -349,4 +326,4 @@ kopdes/
 ├── tests/                             # E2E Test Suite
 ├── .env.example                       # Contoh environment
 └── README.md                          # Panduan lengkap pembelajaran DevOps
-```
+

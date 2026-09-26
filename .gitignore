@@ -11,10 +11,6 @@ terraform/*.tfplan
 # Ansible
 ansible/*.retry
 ansible/.ansible/
-ansible/files/*.zip
-ansible/files/*.msi
-ansible/files/*.exe
-!ansible/files/.gitkeep
 
 # Operating System & IDE
 .DS_Store

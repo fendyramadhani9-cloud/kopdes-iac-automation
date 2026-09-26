@@ -11,7 +11,6 @@
     - "{{ php_dest_dir }}"
     - "{{ app_dest_dir }}"
     - "{{ tools_dir }}\\nssm"
-    - "{{ cache_dir }}"
 
 # =====================================================
 # 1. Setup Runtime PHP
@@ -21,27 +20,16 @@
     path: "{{ php_dest_dir }}\\php.exe"
   register: php_binary_check
 
-- name: Salin arsip PHP dari Controller (jika tersedia lokal)
-  ansible.windows.win_copy:
-    src: "files/php.zip"
-    dest: "{{ cache_dir }}\\php.zip"
+- name: Unduh runtime PHP (Windows x64)
+  ansible.windows.win_get_url:
+    url: "https://windows.php.net/downloads/releases/archives/php-8.2.20-nts-Win32-vs16-x64.zip"
+    dest: "{{ tools_dir }}\\php.zip"
   when: not php_binary_check.stat.exists
-  ignore_errors: true
-  register: local_php_zip
-
-- name: Unduh runtime PHP jika file lokal tidak tersedia di Controller
-  ansible.windows.win_shell: |
-    $url = "https://windows.php.net/downloads/releases/archives/php-8.2.20-nts-Win32-vs16-x64.zip"
-    $dest = "{{ cache_dir }}\\php.zip"
-    if (-not (Test-Path $dest)) {
-      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
-    }
-  when: not php_binary_check.stat.exists and (local_php_zip is failed or not local_php_zip.changed)
 
 - name: Ekstrak arsip PHP ke direktori C:\php
   ansible.windows.win_shell: |
-    Expand-Archive -Path "{{ cache_dir }}\php.zip" -DestinationPath "{{ php_dest_dir }}" -Force
+    Expand-Archive -Path "{{ tools_dir }}\php.zip" -DestinationPath "{{ php_dest_dir }}" -Force
+    Remove-Item "{{ tools_dir }}\php.zip" -Force -ErrorAction SilentlyContinue
   when: not php_binary_check.stat.exists
 
 - name: Konfigurasi php.ini dengan modul pdo_mysql dan mbstring
@@ -58,25 +46,16 @@
     path: "{{ tools_dir }}\\nssm\\nssm.exe"
   register: nssm_binary_check
 
-- name: Salin binary nssm.exe dari Controller (jika tersedia)
-  ansible.windows.win_copy:
-    src: "files/nssm.exe"
-    dest: "{{ tools_dir }}\\nssm\\nssm.exe"
-  when: not nssm_binary_check.stat.exists
-  ignore_errors: true
-  register: local_nssm_bin
-
-- name: Unduh NSSM jika file lokal tidak tersedia di Controller
+- name: Unduh dan siapkan NSSM Service Manager
   ansible.windows.win_shell: |
     $url = "https://nssm.cc/release/nssm-2.24.zip"
-    $dest = "{{ cache_dir }}\\nssm.zip"
-    if (-not (Test-Path $dest)) {
-      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
-    }
-    Expand-Archive -Path $dest -DestinationPath "{{ cache_dir }}\nssm_extracted" -Force
-    Copy-Item "{{ cache_dir }}\nssm_extracted\nssm-2.24\win64\nssm.exe" -Destination "{{ tools_dir }}\nssm\nssm.exe" -Force
-  when: not nssm_binary_check.stat.exists and (local_nssm_bin is failed or not local_nssm_bin.changed)
+    $dest = "{{ tools_dir }}\\nssm.zip"
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+    Expand-Archive -Path $dest -DestinationPath "{{ tools_dir }}\\nssm_extracted" -Force
+    Copy-Item "{{ tools_dir }}\nssm_extracted\nssm-2.24\win64\nssm.exe" -Destination "{{ tools_dir }}\nssm\nssm.exe" -Force
+    Remove-Item $dest, "{{ tools_dir }}\nssm_extracted" -Recurse -Force -ErrorAction SilentlyContinue
+  when: not nssm_binary_check.stat.exists
 
 # =====================================================
 # 3. Deploy Source Code KopDes (Existing Code Base)

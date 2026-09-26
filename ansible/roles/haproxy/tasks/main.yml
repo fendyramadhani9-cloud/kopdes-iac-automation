@@ -10,7 +10,6 @@
   loop:
     - "{{ haproxy_dest_dir }}"
     - "{{ tools_dir }}\\nssm"
-    - "{{ cache_dir }}"
 
 # =====================================================
 # 1. Setup Binary HAProxy
@@ -20,36 +19,17 @@
     path: "{{ haproxy_dest_dir }}\\haproxy.exe"
   register: haproxy_bin_check
 
-- name: Salin arsip HAProxy dari Controller (jika tersedia lokal)
-  ansible.windows.win_copy:
-    src: "files/haproxy.zip"
-    dest: "{{ cache_dir }}\\haproxy.zip"
-  when: not haproxy_bin_check.stat.exists
-  ignore_errors: true
-  register: local_haproxy_zip
-
-- name: Unduh HAProxy for Windows jika file lokal tidak tersedia di Controller
+- name: Unduh dan pasang binary HAProxy for Windows
   ansible.windows.win_shell: |
-    $url = "https://github.com/haproxytech/haproxy/releases"
-    # Fallback portable build untuk lab Windows
-    $dest = "{{ cache_dir }}\\haproxy.zip"
-    if (-not (Test-Path $dest)) {
-      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      # Download binary release port Windows
-      Invoke-WebRequest -Uri "https://raw.githubusercontent.com/develar/haproxy-windows/master/haproxy-1.8.8-win64.zip" -OutFile $dest -UseBasicParsing
+    $dest = "{{ tools_dir }}\\haproxy.zip"
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/develar/haproxy-windows/master/haproxy-1.8.8-win64.zip" -OutFile $dest -UseBasicParsing
+    Expand-Archive -Path $dest -DestinationPath "{{ tools_dir }}\\haproxy_extracted" -Force
+    $bin = Get-ChildItem -Path "{{ tools_dir }}\\haproxy_extracted" -Filter "haproxy.exe" -Recurse | Select-Object -First 1
+    if ($bin) {
+      Copy-Item -Path ($bin.DirectoryName + "\*") -Destination "{{ haproxy_dest_dir }}\" -Recurse -Force
     }
-  when: not haproxy_bin_check.stat.exists and (local_haproxy_zip is failed or not local_haproxy_zip.changed)
-  ignore_errors: true
-
-- name: Ekstrak arsip HAProxy ke C:\haproxy
-  ansible.windows.win_shell: |
-    if (Test-Path "{{ cache_dir }}\haproxy.zip") {
-      Expand-Archive -Path "{{ cache_dir }}\haproxy.zip" -DestinationPath "{{ cache_dir }}\haproxy_extracted" -Force
-      $bin = Get-ChildItem -Path "{{ cache_dir }}\haproxy_extracted" -Filter "haproxy.exe" -Recurse | Select-Object -First 1
-      if ($bin) {
-        Copy-Item -Path ($bin.DirectoryName + "\*") -Destination "{{ haproxy_dest_dir }}\" -Recurse -Force
-      }
-    }
+    Remove-Item $dest, "{{ tools_dir }}\\haproxy_extracted" -Recurse -Force -ErrorAction SilentlyContinue
   when: not haproxy_bin_check.stat.exists
 
 # =====================================================
@@ -60,25 +40,16 @@
     path: "{{ tools_dir }}\\nssm\\nssm.exe"
   register: nssm_check_haproxy
 
-- name: Salin binary nssm.exe ke HAProxy node
-  ansible.windows.win_copy:
-    src: "files/nssm.exe"
-    dest: "{{ tools_dir }}\\nssm\\nssm.exe"
-  when: not nssm_check_haproxy.stat.exists
-  ignore_errors: true
-  register: local_nssm_haproxy
-
-- name: Unduh NSSM jika belum ada
+- name: Unduh dan siapkan NSSM di HAProxy node
   ansible.windows.win_shell: |
     $url = "https://nssm.cc/release/nssm-2.24.zip"
-    $dest = "{{ cache_dir }}\\nssm.zip"
-    if (-not (Test-Path $dest)) {
-      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
-    }
-    Expand-Archive -Path $dest -DestinationPath "{{ cache_dir }}\nssm_extracted" -Force
-    Copy-Item "{{ cache_dir }}\nssm_extracted\nssm-2.24\win64\nssm.exe" -Destination "{{ tools_dir }}\nssm\nssm.exe" -Force
-  when: not nssm_check_haproxy.stat.exists and (local_nssm_haproxy is failed or not local_nssm_haproxy.changed)
+    $dest = "{{ tools_dir }}\\nssm.zip"
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+    Expand-Archive -Path $dest -DestinationPath "{{ tools_dir }}\\nssm_extracted" -Force
+    Copy-Item "{{ tools_dir }}\nssm_extracted\nssm-2.24\win64\nssm.exe" -Destination "{{ tools_dir }}\nssm\nssm.exe" -Force
+    Remove-Item $dest, "{{ tools_dir }}\\nssm_extracted" -Recurse -Force -ErrorAction SilentlyContinue
+  when: not nssm_check_haproxy.stat.exists
 
 # =====================================================
 # 3. Konfigurasi haproxy.cfg

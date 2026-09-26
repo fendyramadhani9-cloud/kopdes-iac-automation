@@ -5,11 +5,8 @@
 
 - name: Pastikan direktori kerja dasar ada di target Windows
   ansible.windows.win_file:
-    path: "{{ item }}"
+    path: "{{ tools_dir }}"
     state: directory
-  loop:
-    - "{{ tools_dir }}"
-    - "{{ cache_dir }}"
 
 - name: Aktifkan aturan Windows Firewall untuk ICMP (Ping)
   ansible.windows.win_firewall_rule:
