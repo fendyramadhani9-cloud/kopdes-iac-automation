@@ -1,63 +1,63 @@
-# KopDes Merah Putih: Infrastructure Automation and Platform
+# KopDes Merah Putih: Otomasi Infrastruktur dan Platform Koperasi Desa
 
-A multi-tier Infrastructure as Code (IaC) and configuration management implementation for the KopDes Merah Putih Village Cooperative Platform, automated using Terraform, Ansible, and VMware Workstation.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [System Architecture](#system-architecture)
-- [Infrastructure Topology](#infrastructure-topology)
-- [Separation of Concerns](#separation-of-concerns)
-- [Technology Stack](#technology-stack)
-- [Runtime and Service Management](#runtime-and-service-management)
-- [Application Roles and Access](#application-roles-and-access)
-- [Repository Structure](#repository-structure)
-- [Deployment Guide](#deployment-guide)
-- [License and Disclaimers](#license-and-disclaimers)
+Implementasi Infrastructure as Code (IaC) dan manajemen konfigurasi multi-tier untuk Platform Koperasi Desa KopDes Merah Putih, diotomatisasi menggunakan Terraform, Ansible, dan VMware Workstation.
 
 ---
 
-## Overview
+## Daftar Isi
 
-KopDes Merah Putih is a full-featured digital platform designed to administer village cooperative business units, local commodity supply chains, member registers, and transactional point-of-sale activities. 
-
-This repository provides the complete infrastructure automation layer required to provision, configure, and orchestrate the platform across a high-availability multi-node cluster. The automation stack utilizes HashiCorp Terraform to lifecycle virtual machine clones via the VMware Workstation REST API, and Ansible to execute idempotent configuration management, runtime provisioning, and application deployment over WinRM.
+- [Ringkasan Proyek](#ringkasan-proyek)
+- [Arsitektur Sistem](#arsitektur-sistem)
+- [Topologi Infrastruktur](#topologi-infrastruktur)
+- [Pemisahan Tanggung Jawab](#pemisahan-tanggung-jawab)
+- [Teknologi yang Digunakan](#teknologi-yang-digunakan)
+- [Manajemen Layanan dan Runtime](#manajemen-layanan-dan-runtime)
+- [Role Pengguna dan Hak Akses](#role-pengguna-dan-hak-akses)
+- [Struktur Direktori Repository](#struktur-direktori-repository)
+- [Panduan Deployment](#panduan-deployment)
+- [Lisensi dan Catatan](#lisensi-dan-catatan)
 
 ---
 
-## System Architecture
+## Ringkasan Proyek
 
-The deployment architecture establishes an isolated four-node production cluster fronted by an L7 load balancer that distributes traffic evenly across redundant web application servers connected to a dedicated database node.
+KopDes Merah Putih adalah platform digital yang dirancang untuk mengelola unit usaha koperasi desa, rantai pasok komoditas lokal, registrasi keanggotaan warga, serta pencatatan transaksi kasir Point of Sale (POS).
+
+Repository ini menyediakan lapisan otomasi infrastruktur lengkap untuk melakukan provisioning, konfigurasi, dan orkestrasi platform pada cluster multi-node dengan ketersediaan tinggi (High Availability). Otomasi memanfaatkan HashiCorp Terraform untuk mengelola siklus hidup cloning Virtual Machine melalui VMware Workstation REST API, serta Ansible untuk menjalankan manajemen konfigurasi yang idempotent, penyediaan runtime, dan deployment kode aplikasi melalui protokol WinRM.
+
+---
+
+## Arsitektur Sistem
+
+Arsitektur sistem menerapkan kluster produksi empat node yang berada di belakang load balancer Layer 7. Load balancer mendistribusikan beban lalu lintas secara merata ke dua server aplikasi PHP yang terhubung ke server database MariaDB terpusat.
 
 ```mermaid
 flowchart TD
-    subgraph Host["Host Machine (VMware Workstation Pro)"]
+    subgraph Host["Host PC (VMware Workstation Pro)"]
         vmrest["VMware REST API Engine\nPort: 8697"]
-        BaseVM["Golden Master VM (Windows Template)\n[Cloning Source]"]
+        BaseVM["Golden Master VM (Template Windows)\n[Sumber Clone]"]
         
-        subgraph Cluster["Target Node Cluster"]
+        subgraph Cluster["Kluster Node Target"]
             HAProxy["Node 1: HAProxy\n[Layer 7 Load Balancer]"]
             Web01["Node 2: WEB01\n[PHP Application Runtime 1]"]
             Web02["Node 3: WEB02\n[PHP Application Runtime 2]"]
-            DB01["Node 4: DB01\n[MariaDB Database Server]"]
+            DB01["Node 4: DB01\n[Server Database MariaDB]"]
         end
     end
 
-    subgraph ControlNode["Controller Workspace / VM"]
+    subgraph ControlNode["Controller VM / Workstation"]
         GitRepo["Git Repository"]
         TF["Terraform Engine\n[elsudano/vmworkstation]"]
         Ansible["Ansible Engine\n[WinRM Transport]"]
     end
 
-    subgraph Clients["User Ingress"]
-        Browser["Client Web Browser"]
+    subgraph Clients["Akses Pengguna"]
+        Browser["Web Browser Klien"]
     end
 
     GitRepo --> TF
-    TF -->|"REST API Invocation (parallelism=1)"| vmrest
-    vmrest -->|"Clone Instance"| BaseVM
+    TF -->|"Panggilan REST API (parallelism=1)"| vmrest
+    vmrest -->|"Clone VM Instance"| BaseVM
     BaseVM -.-> HAProxy
     BaseVM -.-> Web01
     BaseVM -.-> Web02
@@ -66,131 +66,131 @@ flowchart TD
     Ansible -->|"WinRM (Port 5985) Provisioning"| Cluster
 
     Browser -->|"HTTP (Port 80)"| HAProxy
-    HAProxy -->|"Round Robin Traffic Distribution"| Web01
-    HAProxy -->|"Round Robin Traffic Distribution"| Web02
+    HAProxy -->|"Distribusi Round Robin"| Web01
+    HAProxy -->|"Distribusi Round Robin"| Web02
     Web01 -->|"TCP Port 3306"| DB01
     Web02 -->|"TCP Port 3306"| DB01
 ```
 
 ---
 
-## Infrastructure Topology
+## Topologi Infrastruktur
 
-The cluster spans four dedicated virtual machines connected over a private host-only virtual network switch.
+Kluster terdiri dari empat Virtual Machine yang terhubung dalam satu segmen jaringan virtual host-only atau NAT yang terisolasi.
 
-| Hostname | Role | Operating System | Default IP | Target Services |
+| Hostname | Peran (Role) | Sistem Operasi | IP Default | Layanan yang Dijalankan |
 | :--- | :--- | :--- | :--- | :--- |
-| `KopDes-HAProxy` | Load Balancer | Windows 64-bit | `192.168.X.10` | HAProxy (Port 80), Stats Dashboard (Port 8404) |
-| `KopDes-Web01` | Application Server 1 | Windows 64-bit | `192.168.X.11` | PHP CLI Built-in Web Server (Port 8080) wrapped by NSSM |
-| `KopDes-Web02` | Application Server 2 | Windows 64-bit | `192.168.X.12` | PHP CLI Built-in Web Server (Port 8080) wrapped by NSSM |
-| `KopDes-DB01` | Central Database | Windows 64-bit | `192.168.X.13` | MariaDB 10.11 Server (Port 3306) |
+| `KopDes-HAProxy` | Load Balancer | Windows 64-bit | `192.168.X.10` | HAProxy (Port 80), Dashboard Statistik (Port 8404) |
+| `KopDes-Web01` | Server Aplikasi 1 | Windows 64-bit | `192.168.X.11` | PHP Built-in Server (Port 8080) di-wrap oleh NSSM |
+| `KopDes-Web02` | Server Aplikasi 2 | Windows 64-bit | `192.168.X.12` | PHP Built-in Server (Port 8080) di-wrap oleh NSSM |
+| `KopDes-DB01` | Database Server | Windows 64-bit | `192.168.X.13` | MariaDB 10.11 Enterprise LTS (Port 3306) |
 
-*Note: The subnet octet `X` is parameterizable via centralized variables to support isolated multi-tenant and lab sandbox allocations.*
+*Catatan: Oktet subnet `X` dapat disesuaikan secara terpusat melalui variabel konfigurasi untuk mendukung segmentasi lab atau multi-environment.*
 
 ---
 
-## Separation of Concerns
+## Pemisahan Tanggung Jawab
 
-Each component within the repository adheres to strict functional boundaries:
+Setiap komponen dalam repository memiliki batasan fungsi yang jelas:
 
-| Layer | Responsibility | Constraints |
+| Lapisan | Tanggung Jawab Utama | Batasan |
 | :--- | :--- | :--- |
-| **Terraform** | Virtual machine lifecycle management: cloning from base templates, setting CPU cores, allocating memory, configuring network adapters, and managing virtual disk instances. | Does not execute application configurations, install packages, or inject runtime configurations. |
-| **Ansible** | Post-boot orchestration: Windows system baseline, firewall configuration, dependency retrieval, database initialization, service registration via NSSM, and dynamic `.env` configuration. | Does not provision or destroy hypervisor-level virtual machines. |
-| **Web Application** | Core platform logic: business logic, session management, UI/UX, database queries, and geographical location pickers. | Application code remains decoupled from hypervisor and deployment tooling. |
-| **Base Virtual Machine** | Golden image containing baseline Windows installation, VMware Tools, and enabled WinRM listeners. | Serves purely as a read-only template source and does not host production traffic. |
+| **Terraform** | Mengelola siklus hidup Virtual Machine: cloning dari template base, alokasi vCPU, memori RAM, konfigurasi adapter jaringan, dan pembuatan disk virtual. | Tidak menginstal software aplikasi, tidak mengonfigurasi database, dan tidak menginjeksi environment runtime. |
+| **Ansible** | Orkestrasi pasca-booting: standardisasi firewall Windows, penyediaan dependency, instalasi database, registrasi Windows Service via NSSM, dan injeksi konfigurasi `.env`. | Tidak bertanggung jawab atas pembuatan atau penghapusan VM pada level hypervisor. |
+| **Aplikasi Web** | Menjalankan logika bisnis platform koperasi: autentikasi, manajemen katalog, transaksi kasir, dan penentuan koordinat lokasi unit usaha. | Source code aplikasi terisolasi dari perkakas deployment dan hypervisor. |
+| **Base Virtual Machine** | Template gold image yang memuat OS Windows, VMware Tools aktif, dan konfigurasi WinRM listener siap pakai. | Hanya berfungsi sebagai sumber cloning (read-only) dan tidak melayani traffic aplikasi secara langsung. |
 
 ---
 
-## Technology Stack
+## Teknologi yang Digunakan
 
-### Infrastructure and Automation
+### Infrastruktur dan Otomasi
 - **Hypervisor**: VMware Workstation Pro 25H2
-- **Hypervisor Management**: VMware REST API (`vmrest.exe`)
-- **Infrastructure as Code**: Terraform v1.5+ with `elsudano/vmworkstation` provider v1.0.4
-- **Configuration Management**: Ansible Core 2.15+ with `ansible.windows` collection
-- **Transport Layer**: Windows Remote Management (WinRM HTTP Port 5985)
+- **Antarmuka Hypervisor**: VMware REST API (`vmrest.exe`)
+- **Infrastructure as Code**: Terraform v1.5+ dengan provider `elsudano/vmworkstation` v1.0.4
+- **Configuration Management**: Ansible Core 2.15+ dengan koleksi `ansible.windows`
+- **Protokol Transport**: Windows Remote Management (WinRM HTTP Port 5985)
 
-### Platform and Runtimes
-- **Load Balancer**: HAProxy 2.8+ for Windows (Layer 7 Round Robin, Active Health Checks)
-- **Application Runtime**: PHP 8.2+ 64-bit Non-Thread Safe
-- **Process Supervision**: Non-Sucking Service Manager (NSSM)
+### Platform dan Runtime Aplikasi
+- **Load Balancer**: HAProxy 2.8+ untuk Windows (Layer 7 Round Robin, Health Checks aktif)
+- **Runtime Aplikasi**: PHP 8.2+ 64-bit Non-Thread Safe
+- **Manajer Layanan**: Non-Sucking Service Manager (NSSM)
 - **Database Engine**: MariaDB 10.11 Enterprise LTS
-- **Application Frontend**: Plain Vanilla CSS3, Modern Modular JavaScript, Leaflet.js
+- **Frontend Aplikasi**: Plain HTML5, Modern Vanilla CSS3, JavaScript Modular, Leaflet.js
 
 ---
 
-## Runtime and Service Management
+## Manajemen Layanan dan Runtime
 
-### Windows Service Management via NSSM
-Ported binary utilities on Windows (such as native CLI builds of PHP and HAProxy) do not inherently integrate with the Windows Service Control Manager (`sc.exe`). Attempting to register them directly produces `Error 1053` (service failed to respond in a timely fashion). 
+### Penggunaan NSSM pada Windows
+Utilitas portabel pada Windows (seperti binary CLI `php.exe` dan `haproxy.exe`) tidak memiliki fungsi integrasi bawaan dengan Windows Service Control Manager (`sc.exe`). Penggunaan perintah `sc.exe` secara langsung akan memicu kegagalan `Error 1053`.
 
-To ensure stability, Ansible orchestrates the **Non-Sucking Service Manager (`nssm.exe`)** to wrap each process:
-- `KopDesWeb`: Wraps the PHP web server process on Web01 and Web02 with automatic restarts on crash and execution under background service privileges.
-- `HAProxy`: Wraps the HAProxy load balancing process with background event logging and graceful reload capabilities.
+Untuk menjaga reliabilitas sistem, Ansible menggunakan **Non-Sucking Service Manager (`nssm.exe`)** sebagai pembungkus proses menjadi Windows Service sejati:
+- `KopDesWeb`: Membungkus proses web server PHP pada Web01 dan Web02 dengan kemampuan restart otomatis saat terjadi crash serta berjalan di background service.
+- `HAProxy`: Membungkus proses load balancer HAProxy dengan pencatatan log mandiri dan kemampuan reload konfigurasi secara graceful.
 
-### Idempotency and State Management
-- **Database Provisioning**: The MariaDB role executes an initial verification check against existing database schemas before applying SQL migrations, preventing data overwrites during subsequent playbook runs.
-- **Service Verification**: Ansible tasks use `win_service_info` and path guards to guarantee that packages and binaries are downloaded and installed only when absent.
+### Idempotensi Playbook Ansible
+- **Penyediaan Database**: Role MariaDB melakukan verifikasi terhadap keberadaan skema database sebelum menjalankan migrasi SQL, mencegah data tertimpa pada eksekusi ulang playbook.
+- **Pengecekan Layanan**: Task Ansible memanfaatkan modul `win_service_info` dan pengecekan path direktori untuk memastikan paket binary hanya diunduh saat belum terpasang.
 
 ---
 
-## Application Roles and Access
+## Role Pengguna dan Hak Akses
 
-The KopDes platform provides role-based access control out of the box with the following predefined test credentials:
+Platform KopDes menyediakan sistem kontrol akses berbasis peran (RBAC) dengan kredensial default sebagai berikut:
 
-| Role Identifier | Default Username | Default Password | Scope of Authority |
+| Identifier Role | Username Default | Password Default | Lingkup Otoritas |
 | :--- | :--- | :--- | :--- |
-| `HEAD_GOV` | `head@gov.local` | `password123` | Executive regional administration, dynamic KopDes unit instantiation (Spawn KopDes), global revenue auditing, and cluster health monitoring. |
-| `MANAGER` | `manager@gov.local` | `password123` | Cooperative branch operations: commodity inventory management, local citizen registration, and Point-of-Sale cash transaction entry. |
-| `CITIZEN` | `citizen@gov.local` | `password123` | Cooperative membership view, catalog navigation, commodity order placement, and digital receipt access. |
+| `HEAD_GOV` | `head@gov.local` | `password123` | Administrator wilayah: membuat unit koperasi baru (+ Spawn KopDes), audit omzet kumulatif, pendaftaran manager, dan pemantauan kluster. |
+| `MANAGER` | `manager@gov.local` | `password123` | Pengelola unit usaha: manajemen etalase komoditas, registrasi anggota warga desa, dan pencatatan transaksi kasir. |
+| `CITIZEN` | `citizen@gov.local` | `password123` | Warga desa: akses katalog komoditas koperasi, pengajuan keanggotaan, pemesanan produk desa, dan melihat nota transaksi. |
 
 ---
 
-## Repository Structure
+## Struktur Direktori Repository
 
 ```text
 kopdes/
-|-- terraform/                         # Infrastructure as Code (VM Provisioning)
-|   |-- versions.tf                    # Provider declaration (elsudano/vmworkstation)
-|   |-- variables.tf                   # Input definitions (Subnet ID, Host specs, VM IDs)
-|   |-- terraform.tfvars               # Deployment variable inputs
-|   |-- main.tf                        # Resource declarations for 4 target cluster VMs
-|   `-- outputs.tf                     # Cluster topology and IP inventory outputs
+|-- terraform/                         # Infrastructure as Code (Provisioning VM)
+|   |-- versions.tf                    # Deklarasi provider elsudano/vmworkstation
+|   |-- variables.tf                   # Definisi variabel (Subnet ID, Host, VM IDs)
+|   |-- terraform.tfvars               # Nilai variabel deployment lingkungan
+|   |-- main.tf                        # Deklarasi resource untuk 4 VM target
+|   `-- outputs.tf                     # Output alokasi IP dan topologi kluster
 |
-|-- ansible/                           # Configuration Management and Deployment
-|   |-- ansible.cfg                    # WinRM timeout, transport, and connection options
-|   |-- inventory.ini                  # Target host inventory definitions
+|-- ansible/                           # Manajemen Konfigurasi dan Deployment
+|   |-- ansible.cfg                    # Konfigurasi WinRM, timeout, dan transport
+|   |-- inventory.ini                  # Definisi inventory host target
 |   |-- group_vars/
-|   |   `-- all.yml                    # Global variables, service paths, and credentials
-|   |-- site.yml                       # Master multi-play orchestration playbook
+|   |   `-- all.yml                    # Variabel global, path direktori, kredensial
+|   |-- site.yml                       # Master playbook multi-play
 |   `-- roles/
-|       |-- common/                    # Baseline firewall rules, workspace directories
-|       |-- database/                  # MariaDB 10.x installation, user grants, schema seed
-|       |-- webserver/                 # PHP runtime, NSSM daemon, KopDes deploy, .env injection
-|       `-- haproxy/                   # HAProxy binary, Round Robin routing, health checks
+|       |-- common/                    # Baseline aturan firewall dan direktori kerja
+|       |-- database/                  # Instalasi MariaDB 10.x, hak akses, import data
+|       |-- webserver/                 # Runtime PHP, service NSSM, deploy kode, .env dinamis
+|       `-- haproxy/                   # Binary HAProxy, routing Round Robin, health check
 |
-|-- config/                            # Core application database and environment configuration
-|-- database/                          # Production SQL schema and seed fixtures
-|-- includes/                          # Shared PHP application libraries and components
-|-- pages/                             # Role-based application views and API endpoints
-|-- public/                            # Static assets, styling, and public document root
-|-- tests/                             # Automated end-to-end and integration test suites
-|-- .env.example                       # Application environment template
-|-- TUTORIAL.md                        # Complete step-by-step deployment guide from scratch
-`-- README.md                          # Project architecture and technical specification
+|-- config/                            # Konfigurasi database dan environment aplikasi
+|-- database/                          # Skema SQL produksi dan data seed awal
+|-- includes/                          # Library dan komponen aplikasi PHP
+|-- pages/                             # Tampilan halaman berbasis role dan endpoint API
+|-- public/                            # Dokumen root web publik, styling CSS, dan aset
+|-- tests/                             # Pengujian end-to-end dan integrasi otomatis
+|-- .env.example                       # Template konfigurasi environment
+|-- TUTORIAL.md                        # Panduan deployment lengkap langkah-demi-langkah
+`-- README.md                          # Dokumentasi teknis dan arsitektur proyek
 ```
 
 ---
 
-## Deployment Guide
+## Panduan Deployment
 
-For complete, step-by-step instructions on provisioning and deploying this project from scratch on VMware Workstation Pro (including template setup, REST API configuration, Terraform execution, and Ansible deployment), refer to the dedicated guide:
+Panduan lengkap instalasi dan deployment dari awal (mulai dari persiapan template OVA, aktivasi VMware REST API, provisioning Terraform, hingga deployment Ansible) tersedia pada dokumen tersendiri:
 
-**[Comprehensive Deployment Tutorial (TUTORIAL.md)](TUTORIAL.md)**
+**[Panduan Lengkap Deployment dari Awal (TUTORIAL.md)](TUTORIAL.md)**
 
 ---
 
-## License and Disclaimers
+## Lisensi dan Catatan
 
-This project is an educational and technical demonstration created for modern DevOps infrastructure modeling. All village names, cooperative data, and transactions generated by initial seed fixtures are dummy representations for testing and simulation purposes.
+Proyek ini merupakan model implementasi otomasi infrastruktur DevOps untuk tujuan simulasi dan pembelajaran teknis. Seluruh nama desa, data unit koperasi, dan riwayat transaksi pada seed awal merupakan data dummy untuk pengujian sistem.

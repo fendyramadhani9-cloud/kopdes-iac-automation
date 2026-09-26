@@ -1,145 +1,145 @@
-# End-to-End Deployment Tutorial: KopDes Infrastructure Automation
+# Panduan Deployment End-to-End: Otomasi Infrastruktur KopDes
 
-This guide provides a comprehensive, step-by-step walkthrough for deploying the KopDes Merah Putih high-availability cluster from scratch on VMware Workstation Pro using Terraform and Ansible.
-
----
-
-## Table of Contents
-
-1. [Prerequisites and System Requirements](#1-prerequisites-and-system-requirements)
-2. [Phase 1: Base Virtual Machine Preparation](#2-phase-1-base-virtual-machine-preparation)
-3. [Phase 2: VMware REST API Configuration](#3-phase-2-vmware-rest-api-configuration)
-4. [Phase 3: Controller Environment Setup](#4-phase-3-controller-environment-setup)
-5. [Phase 4: Parameter Configuration](#5-phase-4-parameter-configuration)
-6. [Phase 5: Infrastructure Provisioning with Terraform](#6-phase-5-infrastructure-provisioning-with-terraform)
-7. [Phase 6: Configuration Management and Deployment with Ansible](#7-phase-6-configuration-management-and-deployment-with-ansible)
-8. [Phase 7: Cluster Verification and Testing](#8-phase-7-cluster-verification-and-testing)
-9. [Phase 8: High Availability Failover Simulation](#9-phase-8-high-availability-failover-simulation)
-10. [Phase 9: Infrastructure Teardown](#10-phase-9-infrastructure-teardown)
-11. [Troubleshooting and Common Issues](#11-troubleshooting-and-common-issues)
+Panduan ini menyajikan langkah-demi-langkah yang komprehensif untuk mendeploy kluster ketersediaan tinggi (High Availability) KopDes Merah Putih dari awal (nol) pada VMware Workstation Pro menggunakan Terraform dan Ansible.
 
 ---
 
-## 1. Prerequisites and System Requirements
+## Daftar Isi
 
-### Host Machine Specifications
-- **Operating System**: Windows 10 or Windows 11 (64-bit)
-- **Virtualization Software**: VMware Workstation Pro 25H2 (or version 17+)
-- **CPU**: Minimum 4 Physical Cores (8 Threads recommended), VT-x / AMD-V virtualization enabled in BIOS/UEFI
-- **RAM**: Minimum 16 GB (32 GB recommended)
-- **Disk Space**: At least 80 GB free storage (preferably SSD or NVMe)
+1. [Prasyarat dan Kebutuhan Sistem](#1-prasyarat-dan-kebutuhan-sistem)
+2. [Tahap 1: Persiapan Template Base Virtual Machine](#2-tahap-1-persiapan-template-base-virtual-machine)
+3. [Tahap 2: Konfigurasi VMware REST API pada Host](#3-tahap-2-konfigurasi-vmware-rest-api-pada-host)
+4. [Tahap 3: Penyiapan Environment Controller](#4-tahap-3-penyiapan-environment-controller)
+5. [Tahap 4: Penyesuaian Variabel dan Konfigurasi](#5-tahap-4-penyesuaian-variabel-dan-konfigurasi)
+6. [Tahap 5: Provisioning Infrastruktur Menggunakan Terraform](#6-tahap-5-provisioning-infrastruktur-menggunakan-terraform)
+7. [Tahap 6: Manajemen Konfigurasi dan Deployment dengan Ansible](#7-tahap-6-manajemen-konfigurasi-dan-deployment-dengan-ansible)
+8. [Tahap 7: Verifikasi dan Pengujian Kluster](#8-tahap-7-verifikasi-dan-pengujian-kluster)
+9. [Tahap 8: Simulasi Kegagalan dan Pengujian Failover](#9-tahap-8-simulasi-kegagalan-dan-pengujian-failover)
+10. [Tahap 9: Penghapusan dan Pembersihan Infrastruktur](#10-tahap-9-penghapusan-dan-pembersihan-infrastruktur)
+11. [Panduan Pemecahan Masalah (Troubleshooting)](#11-panduan-pemecahan-masalah-troubleshooting)
 
-### Controller Environment
-The automation commands (Git, Terraform, Ansible) should be executed from a dedicated Controller environment. This can be:
-- A lightweight Linux Virtual Machine running on VMware Workstation (e.g., Ubuntu 22.04 LTS), or
-- Windows Subsystem for Linux (WSL2), or
-- A remote Linux management workstation connected to the same virtual network switch.
+---
 
-Ensure the Controller has the following packages installed:
+## 1. Prasyarat dan Kebutuhan Sistem
+
+### Spesifikasi Host PC
+- **Sistem Operasi**: Windows 10 atau Windows 11 (64-bit)
+- **Perangkat Lunak Virtualisasi**: VMware Workstation Pro 25H2 (atau versi 17+)
+- **Prosesor**: Minimal 4 Core Fisik (disarankan 8 Thread), fitur virtualisasi VT-x / AMD-V aktif pada BIOS/UEFI
+- **Memori RAM**: Minimal 16 GB (disarankan 32 GB)
+- **Ruang Penyimpanan**: Minimal 80 GB ruang kosong (disarankan menggunakan SSD atau NVMe)
+
+### Kebutuhan Environment Controller
+Perintah otomasi (Git, Terraform, Ansible) dijalankan dari sebuah Controller. Controller dapat berupa:
+- Virtual Machine Linux ringan yang berjalan di VMware Workstation (misalnya Ubuntu 22.04 LTS), atau
+- Windows Subsystem for Linux (WSL2), atau
+- Laptop/PC manajemen berbasis Linux yang terhubung ke jaringan virtual yang sama.
+
+Pastikan perkakas berikut telah terpasang pada Controller:
 ```bash
-# Ubuntu/Debian Controller setup
+# Update repository dan install paket dasar di Ubuntu/Debian
 sudo apt-get update
 sudo apt-get install -y git curl jq python3 python3-pip
 
-# Install pywinrm for Ansible WinRM transport
+# Install modul pywinrm untuk transportasi WinRM pada Ansible
 python3 -m pip install pywinrm
 
-# Install Terraform (v1.5+)
+# Install Terraform (versi 1.5+)
 sudo apt-get install -y gnupg software-properties-common
 curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 sudo apt-get update && sudo apt-get install -y terraform
 
-# Install Ansible Core and Windows Collection
+# Install Ansible Core dan koleksi modul Windows
 sudo apt-get install -y ansible
 ansible-galaxy collection install ansible.windows
 ```
 
 ---
 
-## 2. Phase 1: Base Virtual Machine Preparation
+## 2. Tahap 1: Persiapan Template Base Virtual Machine
 
-Terraform uses a pre-configured "Golden Master" Windows virtual machine as the source for linked or full clones.
+Terraform memerlukan satu Virtual Machine Windows referensi ("Golden Master") sebagai sumber clone.
 
-### 2.1 Import the Base VM OVA / Template
-1. Open **VMware Workstation Pro**.
-2. Select **File > Open**, browse to your Windows Base OVA file, and complete the import wizard.
-3. Configure the virtual network adapter:
-   - Assign the network adapter to the desired Host-Only network (e.g., `VMnet1`) or NAT network (e.g., `VMnet8`).
-   - Ensure the IP subnet aligns with your planned network topology (e.g., `192.168.17.0/24`).
+### 2.1 Import File Template OVA
+1. Buka **VMware Workstation Pro**.
+2. Pilih menu **File > Open**, arahkan ke file OVA Windows Base VM Anda, dan selesaikan wizard import.
+3. Konfigurasikan Network Adapter VM:
+   - Arahkan ke virtual network yang ditentukan, misalnya Host-Only (`VMnet1`) atau NAT (`VMnet8`).
+   - Pastikan subnet IP berada dalam rentang yang Anda rencanakan (misalnya `192.168.17.0/24`).
 
-### 2.2 Boot and Prepare the Base Operating System
-1. Power on the Base VM.
-2. Log in with local Administrator credentials.
-3. Verify that **VMware Tools** is installed and running (required for guest IP and state detection by the VMware REST API).
+### 2.2 Booting dan Persiapan Sistem Operasi Base
+1. Nyalakan Base VM.
+2. Masuk menggunakan akun Administrator lokal.
+3. Pastikan **VMware Tools** telah terpasang dan berstatus aktif (wajib agar VMware REST API dapat membaca status IP dan heartbeat VM).
 
-### 2.3 Configure WinRM on the Base VM
-Ansible requires Windows Remote Management (WinRM) to execute configuration tasks. Open **PowerShell as Administrator** inside the Base VM and run:
+### 2.3 Konfigurasi WinRM pada Base VM
+Ansible menggunakan protokol Windows Remote Management (WinRM) untuk melakukan konfigurasi. Buka **PowerShell sebagai Administrator** di dalam Base VM, lalu jalankan:
 
 ```powershell
-# 1. Enable and configure WinRM with default listener
+# 1. Aktifkan WinRM dengan listener default
 winrm quickconfig -q -force
 
-# 2. Allow Basic authentication and unencrypted transport over HTTP (Port 5985)
+# 2. Izinkan autentikasi Basic dan transfer unencrypted melalui HTTP (Port 5985)
 winrm set winrm/config/service/auth '@{Basic="true"}'
 winrm set winrm/config/service '@{AllowUnencrypted="true"}'
 winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="1024"}'
 
-# 3. Allow execution of PowerShell scripts
+# 3. Berikan izin eksekusi skrip PowerShell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
 
-# 4. Open Windows Firewall for WinRM and ICMP ping
+# 4. Buka aturan Windows Firewall untuk WinRM dan ICMP ping
 netsh advfirewall firewall add rule name="WinRM 5985" dir=in action=allow protocol=TCP localport=5985
 netsh advfirewall firewall add rule name="ICMP Allow incoming V4 echo" protocol=icmpv4:8,any dir=in action=allow
 ```
 
-### 2.4 Shut Down the Base VM
-Once configured, cleanly shut down the Base VM:
+### 2.4 Matikan Base VM
+Setelah konfigurasi selesai, matikan Base VM secara bersih:
 
 ```powershell
 Stop-Computer -Force
 ```
 
-> **Important**: The Base VM **must remain powered off** during all cloning operations. VMware Workstation cannot clone a running virtual machine via the REST API.
+> **Perhatian**: Base VM **wajib dalam kondisi mati (powered off)** selama proses cloning Terraform. VMware Workstation REST API tidak dapat melakukan cloning pada VM yang sedang berjalan.
 
 ---
 
-## 3. Phase 2: VMware REST API Configuration
+## 3. Tahap 2: Konfigurasi VMware REST API pada Host
 
-Terraform communicates with VMware Workstation through the native `vmrest.exe` daemon.
+Terraform berinteraksi dengan VMware Workstation melalui service `vmrest.exe` yang berjalan pada host Windows.
 
-### 3.1 Configure API Credentials
-Open **PowerShell as Administrator** on the Windows host machine:
+### 3.1 Konfigurasi Kredensial API
+Buka **PowerShell sebagai Administrator** pada PC Host Windows Anda:
 
 ```powershell
-# Navigate to the VMware Workstation directory
+# Masuk ke direktori instalasi VMware Workstation
 cd "C:\Program Files (x86)\VMware\VMware Workstation"
 
-# Set up REST API credentials (one-time setup)
+# Konfigurasikan username dan password REST API (hanya dilakukan sekali)
 .\vmrest.exe -C
 ```
 
-When prompted:
-- Set username: `admin`
-- Set password: `PasswordKopdes2025!`
+Saat diminta input:
+- Username: `admin`
+- Password: `PasswordKopdes2025!`
 
-### 3.2 Start the REST API Service
-Start the service listening on port 8697:
+### 3.2 Menjalankan Service REST API
+Jalankan service `vmrest` pada port 8697:
 
 ```powershell
 .\vmrest.exe -p 8697
 ```
 
-Keep this PowerShell terminal open. The service must remain active throughout all Terraform execution phases.
+Biarkan jendela PowerShell ini tetap terbuka. Service ini harus terus berjalan selama proses eksekusi Terraform.
 
-### 3.3 Verify Connectivity and Retrieve Base VM ID
-From the Controller machine, test the API endpoint and retrieve the registered VM list:
+### 3.3 Verifikasi Konektivitas dan Ambil ID Base VM
+Dari terminal Controller, uji koneksi ke API dan dapatkan daftar VM yang terdaftar:
 
 ```bash
 curl -u admin:PasswordKopdes2025! http://<HOST_IP>:8697/api/vms
 ```
 
-The output will be a JSON array. Locate the object corresponding to your Base VM:
+Respons berupa JSON array akan menampilkan daftar VM:
 
 ```json
 [
@@ -150,67 +150,67 @@ The output will be a JSON array. Locate the object corresponding to your Base VM
 ]
 ```
 
-Copy the `"id"` value. This value is required for Terraform variable configuration.
+Salin nilai `"id"` dari Base VM Anda. Nilai ini akan dimasukkan ke variabel Terraform.
 
 ---
 
-## 4. Phase 3: Controller Environment Setup
+## 4. Tahap 3: Penyiapan Environment Controller
 
-Clone the automation repository on your Controller machine:
+Clone repository proyek otomasi ini ke Controller Anda:
 
 ```bash
 git clone https://github.com/fendyramadhani9-cloud/kopdes-iac-automation.git kopdes
 cd kopdes
 ```
 
-Verify the directory structure:
+Periksa struktur folder:
 ```bash
 ls -la
-# Expected folders: ansible, terraform, config, database, includes, pages, public, tests
+# Folder utama: ansible, terraform, config, database, includes, pages, public, tests
 ```
 
 ---
 
-## 5. Phase 4: Parameter Configuration
+## 5. Tahap 4: Penyesuaian Variabel dan Konfigurasi
 
-The project is designed with centralized configuration files so that environment-specific details are set in only two files.
+Seluruh parameter lingkungan dipusatkan pada dua file konfigurasi:
 
-### 5.1 Configure Terraform Variables (`terraform/terraform.tfvars`)
-Open `terraform/terraform.tfvars` in your editor:
+### 5.1 Edit Variabel Terraform (`terraform/terraform.tfvars`)
+Buka file `terraform/terraform.tfvars`:
 
 ```bash
 nano terraform/terraform.tfvars
 ```
 
-Update the values to reflect your host environment:
+Sesuaikan nilai variabel dengan lingkungan Anda:
 
 ```hcl
-# Subnet identifier octet (maps to 192.168.X.0/24)
+# Nomor identifikasi subnet (menentukan segmen IP 192.168.X.0/24)
 student_id = 17
 
-# VMware REST API connection details
+# Parameter koneksi VMware REST API
 vmrest_host     = "192.168.17.1"
 vmrest_port     = 8697
 vmrest_user     = "admin"
 vmrest_password = "PasswordKopdes2025!"
 
-# ID of the Base VM retrieved from Phase 2
+# ID Base VM yang diperoleh pada Tahap 2
 base_vm_id = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
 
-# Target disk directory on Host PC where cloned VMs will be stored
+# Direktori penyimpanan file VM hasil clone pada disk Host
 vm_target_path = "D:\\VirtualMachines\\KopDes-Cluster"
 ```
 
-Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
+Simpan file (`Ctrl+O`, `Enter`, `Ctrl+X`).
 
-### 5.2 Configure Ansible Inventory (`ansible/inventory.ini`)
-Open `ansible/inventory.ini`:
+### 5.2 Edit Inventory Ansible (`ansible/inventory.ini`)
+Buka file `ansible/inventory.ini`:
 
 ```bash
 nano ansible/inventory.ini
 ```
 
-Ensure the IP addresses match the subnet configured in `terraform.tfvars`:
+Pastikan alamat IP node target sesuai dengan subnet yang ditentukan pada Terraform:
 
 ```ini
 [loadbalancer]
@@ -241,41 +241,41 @@ ansible_winrm_operation_timeout_sec=90
 
 ---
 
-## 6. Phase 5: Infrastructure Provisioning with Terraform
+## 6. Tahap 5: Provisioning Infrastruktur Menggunakan Terraform
 
-### 6.1 Initialize and Validate
-Navigate to the `terraform/` directory:
+### 6.1 Inisialisasi dan Validasi
+Masuk ke direktori `terraform/`:
 
 ```bash
 cd terraform
 
-# Initialize provider plugins
+# Inisialisasi plugin provider
 terraform init
 
-# Validate configuration syntax
+# Validasi sintaks konfigurasi
 terraform validate
 ```
 
-### 6.2 Review Provisioning Plan
-Run `terraform plan` to verify that 4 virtual machines will be created:
+### 6.2 Periksa Execution Plan
+Jalankan `terraform plan` untuk memastikan 4 Virtual Machine akan dibuat:
 
 ```bash
 terraform plan
 ```
 
-Output should show `Plan: 4 to add, 0 to change, 0 to destroy.`
+Output yang diharapkan: `Plan: 4 to add, 0 to change, 0 to destroy.`
 
-### 6.3 Apply Provisioning
-Execute the resource creation:
+### 6.3 Eksekusi Pembuatan VM
+Terapkan pembuatan resource:
 
 ```bash
 terraform apply -parallelism=1 -auto-approve
 ```
 
-> **Critical Note on `-parallelism=1`**:  
-> The VMware Workstation REST API executes disk cloning operations sequentially on the host storage. Attempting to clone multiple virtual machines concurrently causes disk I/O lock contention, leading to API crashes and timeouts. Setting `-parallelism=1` ensures each VM is created and powered on one at a time.
+> **Catatan Teknis Mengenai `-parallelism=1`**:  
+> VMware Workstation REST API memproses operasi I/O disk clone secara serial pada media penyimpanan host. Melakukan clone paralel akan menyebabkan perebutan lock disk (*disk lock contention*), yang berakibat pada kegagalan atau timeout API. Penggunaan `-parallelism=1` menjamin setiap VM dibuat dan dihidupkan secara berurutan dengan aman.
 
-Wait for the process to complete. You will see output detailing the allocated IP addresses:
+Tunggu hingga proses selesai. Output alokasi IP akan ditampilkan di akhir:
 ```text
 Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
 
@@ -286,23 +286,23 @@ web01_ip   = "192.168.17.11"
 web02_ip   = "192.168.17.12"
 ```
 
-Verify in the VMware Workstation interface that four new VMs (`KopDes-17-HAProxy`, `KopDes-17-Web01`, `KopDes-17-Web02`, and `KopDes-17-DB01`) are present and running.
+Buka aplikasi VMware Workstation pada host dan pastikan keempat VM (`KopDes-17-HAProxy`, `KopDes-17-Web01`, `KopDes-17-Web02`, `KopDes-17-DB01`) telah muncul dan dalam keadaan menyala.
 
 ---
 
-## 7. Phase 6: Configuration Management and Deployment with Ansible
+## 7. Tahap 6: Manajemen Konfigurasi dan Deployment dengan Ansible
 
-### 7.1 Test WinRM Connectivity
-Navigate to the `ansible/` directory:
+### 7.1 Uji Konektivitas WinRM
+Pindah ke direktori `ansible/`:
 
 ```bash
 cd ../ansible
 
-# Ping all Windows nodes via WinRM
+# Uji ping WinRM ke seluruh target node Windows
 ansible windows -m win_ping
 ```
 
-All four hosts should respond with success:
+Seluruh host target harus merespons sukses:
 ```text
 haproxy-node | SUCCESS => {
     "changed": false,
@@ -315,55 +315,54 @@ web01-node | SUCCESS => {
 ...
 ```
 
-If a host fails to respond immediately, wait 30 seconds for the Windows operating system to complete its network discovery after cloning, then re-run the command.
+*Jika ada node yang belum merespons, tunggu sekitar 30 detik agar inisialisasi jaringan Windows selesai, lalu ulangi perintah.*
 
-### 7.2 Execute Master Playbook
-Run the master deployment playbook:
+### 7.2 Eksekusi Master Playbook
+Jalankan master playbook:
 
 ```bash
 ansible-playbook site.yml
 ```
 
-The playbook executes the following five plays in order:
-1. **Play 1 (All Nodes - Common Role)**:
-   - Configures firewall rules to allow ICMP echo and WinRM.
-   - Ensures base working directories (`C:\tools`, `C:\logs`) exist.
+Playbook akan mengeksekusi tahapan berikut secara otomatis:
+1. **Play 1 (Seluruh Node - Common Role)**:
+   - Membuka port WinRM dan ICMP ping pada Windows Firewall.
+   - Membuat direktori kerja standar (`C:\tools`, `C:\logs`).
 2. **Play 2 (DB01 - Database Role)**:
-   - Downloads and silently installs MariaDB 10.11 Enterprise LTS.
-   - Secures local and remote root access.
-   - Creates the `kopdes` database and application database user.
-   - Applies table schema and idempotently imports initial seed fixtures.
+   - Mengunduh dan memasang MariaDB 10.11 secara silent.
+   - Mengamankan akun root lokal dan remote.
+   - Membuat database `kopdes` serta user aplikasi dengan hak akses terbatas.
+   - Mengimpor skema tabel dan data seed secara idempotent.
 3. **Play 3 (Web01 & Web02 - Webserver Role)**:
-   - Downloads and unpacks PHP 8.2 non-thread-safe runtime.
-   - Configures optimized `php.ini`.
-   - Deploys application source code from repository to `C:\inetpub\kopdes`.
-   - Injects a dynamically rendered `.env` file per host (`SERVER_NODE=WEB-01` on node 1, `SERVER_NODE=WEB-02` on node 2).
-   - Downloads NSSM and registers the `KopDesWeb` Windows Service.
-   - Starts the web service listening on port 8080.
+   - Mengunduh dan mengekstrak runtime PHP 8.2 non-thread-safe.
+   - Mengonfigurasi `php.ini`.
+   - Mendeploy seluruh kode aplikasi KopDes ke `C:\inetpub\kopdes`.
+   - Menginjeksi file `.env` dinamis per host (`SERVER_NODE=WEB-01` dan `SERVER_NODE=WEB-02`).
+   - Mendaftarkan dan menjalankan layanan Windows Service `KopDesWeb` melalui NSSM pada port 8080.
 4. **Play 4 (HAProxy - Loadbalancer Role)**:
-   - Downloads and unpacks HAProxy 2.8+ binary.
-   - Renders `haproxy.cfg` configured with Layer 7 HTTP mode, Round Robin algorithm, active backend health checks, and a statistics listener.
-   - Registers and starts the `HAProxy` Windows Service via NSSM on port 80.
+   - Mengunduh dan mengekstrak binary HAProxy 2.8+.
+   - Menghasilkan file konfigurasi `haproxy.cfg` (Layer 7 Round Robin, active health check, dan listener statistik).
+   - Mendaftarkan dan menjalankan layanan Windows Service `HAProxy` melalui NSSM pada port 80.
 5. **Play 5 (Smoke Tests)**:
-   - Validates that port 80 and port 8404 are actively listening on the load balancer.
+   - Memvalidasi bahwa port 80 dan port 8404 aktif merespons pada load balancer.
 
 ---
 
-## 8. Phase 7: Cluster Verification and Testing
+## 8. Tahap 7: Verifikasi dan Pengujian Kluster
 
-### 8.1 Accessing the Application
-Open a web browser on any machine on the network:
+### 8.1 Mengakses Aplikasi Web
+Buka browser dari perangkat yang terhubung ke jaringan kluster:
 
 ```text
 http://192.168.17.10/
 ```
 
-The KopDes Merah Putih dashboard will appear.
+Antarmuka web KopDes Merah Putih akan tampil di layar.
 
-### 8.2 Verifying Round Robin Load Balancing
-In the top-right corner of the application interface, check the **Server Node** indicator.
-- Refresh the page (**F5**). The indicator alternates between `WEB-01` and `WEB-02`.
-- You can also verify this from the Controller terminal using `curl`:
+### 8.2 Verifikasi Distribusi Beban Round Robin
+Perhatikan label **Server Node** di sudut kanan atas topbar aplikasi:
+- Lakukan refresh halaman (**F5**). Label akan bergantian menampilkan `WEB-01` dan `WEB-02`.
+- Verifikasi juga dapat dilakukan langsung dari terminal Controller:
 
 ```bash
 for i in {1..4}; do
@@ -372,7 +371,7 @@ for i in {1..4}; do
 done
 ```
 
-Expected output:
+Output yang diharapkan:
 ```text
 WEB-01
 WEB-02
@@ -380,91 +379,91 @@ WEB-01
 WEB-02
 ```
 
-### 8.3 HAProxy Statistics Dashboard
-View the live cluster health dashboard in your browser:
+### 8.3 Dashboard Statistik HAProxy
+Buka dashboard statistik pada browser:
 
 ```text
 http://192.168.17.10:8404/
 ```
 
-Both backend servers (`web01` and `web02`) will show an active **green (`UP`)** state with continuous health checks and traffic distribution metrics.
+Kedua node backend (`web01` dan `web02`) akan berstatus **hijau (`UP`)** dengan metrik health check dan distribusi trafik yang aktif.
 
-### 8.4 Application Feature Testing
-Log in with the Head of Government credentials to verify full functionality:
+### 8.4 Pengujian Fitur Aplikasi
+Masuk menggunakan akun Administrator Wilayah:
 - **Email**: `head@gov.local`
 - **Password**: `password123`
 
-Navigate to **Spawn KopDes**:
-1. Click **+ Spawn KopDes** in the dashboard.
-2. Select an arbitrary coordinate anywhere on the interactive Leaflet map.
-3. Submit the form. The system will persist the new cooperative unit with valid latitude and longitude coordinates into the MariaDB database on DB01.
+Uji fitur pembuatan unit koperasi baru:
+1. Klik menu **+ Spawn KopDes**.
+2. Pilih titik lokasi pada peta interaktif Leaflet.
+3. Lengkapi formulir dan simpan. Sistem akan mencatat unit koperasi baru dengan data koordinat lintang dan bujur yang valid ke database MariaDB di DB01.
 
 ---
 
-## 9. Phase 8: High Availability Failover Simulation
+## 9. Tahap 8: Simulasi Kegagalan dan Pengujian Failover
 
-To demonstrate automated cluster resilience:
+Untuk membuktikan keandalan kluster saat terjadi kegagalan server:
 
-### 9.1 Simulate Web Server Failure
-From the Controller machine, stop the web service on `WEB-01`:
+### 9.1 Simulasikan Kegagalan pada WEB-01
+Dari terminal Controller, hentikan service web di node `WEB-01`:
 
 ```bash
 ansible web01-node -m win_service -a "name=KopDesWeb state=stopped"
 ```
 
-### 9.2 Observe Health Check Detection
-Refresh the HAProxy statistics page (`http://192.168.17.10:8404/`). Within seconds, `web01` changes status to **red (`DOWN`)**.
+### 9.2 Amati Deteksi Health Check
+Buka kembali dashboard statistik HAProxy (`http://192.168.17.10:8404/`). Dalam beberapa detik, status node `web01` otomatis berubah menjadi **merah (`DOWN`)**.
 
-### 9.3 Verify Application Availability
-Refresh the main application page (`http://192.168.17.10/`).  
-The application continues running without interruption. All traffic is automatically rerouted to `WEB-02`.
+### 9.3 Verifikasi Ketersediaan Layanan
+Refresh halaman utama aplikasi (`http://192.168.17.10/`).  
+Aplikasi tetap berjalan normal tanpa gangguan karena seluruh trafik otomatis dialihkan secara transparan ke `WEB-02`.
 
-### 9.4 Restore Service (Self-Healing)
-Start the service again on `WEB-01`:
+### 9.4 Pemulihan Layanan (Self-Healing)
+Nyalakan kembali service di `WEB-01`:
 
 ```bash
 ansible web01-node -m win_service -a "name=KopDesWeb state=started"
 ```
 
-HAProxy health checks will detect the restored service, transition `web01` back to green (`UP`), and resume Round Robin distribution.
+HAProxy akan mendeteksi node kembali sehat, mengembalikan status ke hijau (`UP`), dan memasukkannya kembali ke antrean rotasi Round Robin.
 
 ---
 
-## 10. Phase 9: Infrastructure Teardown
+## 10. Tahap 9: Penghapusan dan Pembersihan Infrastruktur
 
-To cleanly remove all provisioned virtual machines and reclaim disk space:
+Jika pengujian telah selesai dan Anda ingin membersihkan seluruh VM yang telah dibuat untuk menghemat ruang disk:
 
 ```bash
 cd terraform
 terraform destroy -parallelism=1 -auto-approve
 ```
 
-Terraform communicates with `vmrest.exe` to stop and unregister the 4 virtual machines, safely deleting their virtual disk files from the host path.
+Terraform akan memerintahkan `vmrest.exe` untuk mematikan dan menghapus keempat VM secara aman dari disk host.
 
 ---
 
-## 11. Troubleshooting and Common Issues
+## 11. Panduan Pemecahan Masalah (Troubleshooting)
 
-### Issue 1: WinRM Connection Refused or Timeout
-- **Symptom**: `ansible windows -m win_ping` fails with `ConnectionRefused` or timeout.
-- **Cause**: Windows Firewall blocking port 5985, or WinRM service is stopped.
-- **Remedy**: Log into the target VM directly and verify WinRM status in PowerShell:
+### Kendala 1: Koneksi WinRM Ditolak atau Timeout
+- **Gejala**: Perintah `ansible windows -m win_ping` gagal dengan status `ConnectionRefused` atau timeout.
+- **Penyebab**: Windows Firewall memblokir port 5985, atau service WinRM belum berjalan di VM target.
+- **Solusi**: Masuk ke VM target melalui konsol VMware Workstation dan jalankan perintah pemeriksaan pada PowerShell:
   ```powershell
   Get-Service WinRM
   netstat -ano | findstr 5985
   ```
 
-### Issue 2: VMware REST API Returns 401 Unauthorized
-- **Symptom**: Terraform returns `Error: 401 Unauthorized` during `terraform apply`.
-- **Cause**: Mismatch between `vmrest_user`/`vmrest_password` in `terraform.tfvars` and credentials generated via `vmrest.exe -C`.
-- **Remedy**: Re-run `.\vmrest.exe -C` on the host to reset the password, update `terraform.tfvars`, and re-apply.
+### Kendala 2: VMware REST API Menghasilkan Error 401 Unauthorized
+- **Gejala**: Terraform menampilkan `Error: 401 Unauthorized` saat menjalankan `terraform apply`.
+- **Penyebab**: Kredensial `vmrest_user` atau `vmrest_password` pada `terraform.tfvars` tidak cocok dengan kredensial yang dibuat melalui `vmrest.exe -C`.
+- **Solusi**: Jalankan kembali `.\vmrest.exe -C` di host untuk mereset kata sandi, sesuaikan nilai pada `terraform.tfvars`, lalu coba kembali.
 
-### Issue 3: Terraform Returns "Index Out of Range" Panic
-- **Symptom**: Terraform crashes with a Go runtime slice error during resource creation.
-- **Cause**: Incompatible provider version. Provider version `2.0.1` contains an upstream issue on specific Windows builds.
-- **Remedy**: Ensure `terraform/versions.tf` pins the provider to version `~> 1.0.4`.
+### Kendala 3: Terraform Mengalami Panic "Index Out of Range"
+- **Gejala**: Terraform berhenti mendadak dengan pesan slice runtime Go.
+- **Penyebab**: Penggunaan provider `elsudano/vmworkstation` versi 2.0.1 yang memiliki bug pada build Windows tertentu.
+- **Solusi**: Pastikan file `terraform/versions.tf` mengunci versi provider pada `~> 1.0.4`.
 
-### Issue 4: NSSM Windows Service Fails to Start
-- **Symptom**: Ansible task `win_service` fails with service start timeout.
-- **Cause**: Port collision (port 80 or 8080 already in use) or missing runtime executable.
-- **Remedy**: Review NSSM error logs stored on the target VM under `C:\logs\` (`kopdes_web_error.log` or `haproxy_error.log`).
+### Kendala 4: Service Windows NSSM Gagal Berjalan
+- **Gejala**: Task Ansible `win_service` gagal saat memulai service `KopDesWeb` atau `HAProxy`.
+- **Penyebab**: Port bentrok (port 80 atau 8080 telah digunakan proses lain) atau file binary belum terunduh sempurna.
+- **Solusi**: Periksa log error yang dicatat oleh NSSM di VM target pada direktori `C:\logs\` (`kopdes_web_error.log` atau `haproxy_error.log`).
