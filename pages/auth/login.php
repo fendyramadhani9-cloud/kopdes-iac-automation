@@ -21,6 +21,11 @@ if (is_logged_in()) {
 
 $error = '';
 $emailInput = '';
+$flashSuccess = flash('success');
+$flashError = flash('error');
+if ($flashError && empty($error)) {
+    $error = $flashError;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf()) {
@@ -269,6 +274,15 @@ $nodeInfo = get_active_node_info();
                 <p class="login-desc">Masukkan kredensial akun Anda untuk mengakses dashboard KopDes.</p>
             </div>
 
+            <?php if (!empty($flashSuccess)): ?>
+                <div class="alert alert-success">
+                    <div class="alert-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <div class="alert-content"><?= e($flashSuccess) ?></div>
+                </div>
+            <?php endif; ?>
+
             <?php if (!empty($error)): ?>
                 <div class="alert alert-danger">
                     <div class="alert-icon">
@@ -295,6 +309,11 @@ $nodeInfo = get_active_node_info();
                 <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:20px;">
                     Masuk ke Dashboard
                 </button>
+
+                <div style="text-align:center;margin-top:16px;font-size:0.875rem;color:var(--slate-600);">
+                    Belum memiliki akun warga? 
+                    <a href="index.php?page=register" style="color:var(--primary-700);font-weight:700;text-decoration:none;">Daftar Akun Baru (Citizen) &rarr;</a>
+                </div>
             </form>
 
             <!-- Demo Accounts Panel -->

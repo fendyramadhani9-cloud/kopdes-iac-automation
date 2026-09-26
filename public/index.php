@@ -38,6 +38,7 @@ if (empty($page)) {
 $routes = [
     // Auth Routes
     'login'                   => __DIR__ . '/../pages/auth/login.php',
+    'register'                => __DIR__ . '/../pages/auth/register.php',
     'logout'                  => __DIR__ . '/../pages/auth/logout.php',
 
     // HEAD_GOV Routes
