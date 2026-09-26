@@ -1,97 +1,78 @@
 ---
 # ==============================================================================
-# Role: Database (MariaDB 10.x on Windows DB01 Node)
+# Role: Database (MariaDB 10.x on Alpine Linux DB01 Node)
 # ==============================================================================
 
-- name: Cek status service MariaDB pada sistem
-  ansible.windows.win_service_info:
-    name: MariaDB
-  register: mariadb_service_check
-
-# Idempotent installation: hanya install jika service MariaDB belum terdaftar
-- name: Unduh installer MariaDB 10.11 MSI
-  ansible.windows.win_get_url:
-    url: "https://downloads.mariadb.com/MariaDB/mariadb-10.11.8/winx64-packages/mariadb-10.11.8-winx64.msi"
-    dest: "{{ tools_dir }}\\mariadb.msi"
-  when: not mariadb_service_check.exists
-
-- name: Install MariaDB secara silent (unattended) sebagai Windows Service
-  ansible.windows.win_package:
-    path: "{{ tools_dir }}\\mariadb.msi"
-    arguments: 'SERVICENAME=MariaDB PORT={{ db_port }} PASSWORD="{{ db_root_password }}" ADDLOCAL=ALL /qn'
+- name: Pasang paket MariaDB Server dan Client di Alpine Linux
+  ansible.builtin.package:
+    name:
+      - mariadb
+      - mariadb-client
     state: present
-  when: not mariadb_service_check.exists
 
-- name: Pastikan service MariaDB berstatus running dan auto-start
-  ansible.windows.win_service:
-    name: MariaDB
+- name: Cek apakah direktori database MariaDB sudah terinisialisasi
+  ansible.builtin.stat:
+    path: /var/lib/mysql/mysql
+  register: mariadb_datadir_check
+
+- name: Inisialisasi direktori data MariaDB
+  ansible.builtin.command:
+    cmd: mariadb-install-db --user=mysql --datadir=/var/lib/mysql
+  when: not mariadb_datadir_check.stat.exists
+
+- name: Pastikan MariaDB mengizinkan koneksi jaringan (bind-address = 0.0.0.0)
+  ansible.builtin.lineinfile:
+    path: /etc/my.cnf.d/mariadb-server.cnf
+    regexp: '^#?bind-address'
+    line: 'bind-address = 0.0.0.0'
+    insertafter: '^\[mysqld\]'
+  notify: Restart MariaDB
+
+- name: Pastikan service MariaDB aktif dan berjalan saat startup
+  ansible.builtin.service:
+    name: mariadb
     state: started
-    start_mode: auto
-
-- name: Izinkan port database (3306) pada Windows Firewall khusus dari Web01 dan Web02
-  ansible.windows.win_firewall_rule:
-    name: "Allow-MariaDB-From-WebServers"
-    localport: "{{ db_port }}"
-    action: allow
-    direction: in
-    protocol: tcp
-    remoteip: "{{ web01_ip }},{{ web02_ip }},127.0.0.1"
-    state: present
     enabled: yes
 
-- name: Deteksi path binary mysql.exe
-  ansible.windows.win_shell: |
-    $candidates = @(
-      (Get-Item "C:\Program Files\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue).FullName,
-      (Get-Item "C:\tools\mariadb*\bin\mysql.exe" -ErrorAction SilentlyContinue).FullName,
-      "mysql.exe"
-    )
-    foreach ($c in $candidates) {
-      if ($c -and (Test-Path $c)) {
-        return $c
-      }
-    }
-    return "mysql.exe"
-  register: mysql_path_query
-  changed_when: false
-
-- name: Render file inisialisasi SQL database dan hak akses
-  ansible.windows.win_template:
+- name: Render template SQL inisialisasi user dan database KopDes
+  ansible.builtin.template:
     src: init_db.sql.j2
-    dest: "{{ tools_dir }}\\init_db.sql"
-  register: init_sql_template
+    dest: /tmp/init_db.sql
+    mode: '0600'
+  register: init_sql_result
 
-- name: Eksekusi inisialisasi database dan user permissions
-  ansible.windows.win_shell: |
-    $mysql = "{{ mysql_path_query.stdout | trim }}"
-    & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} -e "source {{ tools_dir }}\init_db.sql"
-  when: init_sql_template.changed or not mariadb_service_check.exists
+- name: Terapkan inisialisasi database dan user KopDes
+  ansible.builtin.shell: |
+    if mysql -u root -p"{{ db_root_password }}" -e "SELECT 1;" >/dev/null 2>&1; then
+      mysql -u root -p"{{ db_root_password }}" < /tmp/init_db.sql
+    else
+      mysql -u root < /tmp/init_db.sql
+    fi
+  when: init_sql_result.changed or not mariadb_datadir_check.stat.exists
 
-- name: Cek apakah tabel 'kopdes' sudah ada di database (Idempotency Check)
-  ansible.windows.win_shell: |
-    $mysql = "{{ mysql_path_query.stdout | trim }}"
-    $result = & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} -D {{ db_name }} -N -e "SHOW TABLES LIKE 'kopdes';"
-    return $result.Trim()
+- name: Cek apakah tabel kopdes sudah ada di database (Pemeriksaan Idempotensi)
+  ansible.builtin.shell: |
+    mysql -u root -p"{{ db_root_password }}" -N -e "SHOW TABLES IN {{ db_name }} LIKE 'kopdes';"
   register: kopdes_table_check
   changed_when: false
+  failed_when: false
 
-- name: Salin schema.sql dan seed.sql dari project KopDes
-  ansible.windows.win_copy:
+- name: Salin file skema dan data seed KopDes ke server database
+  ansible.builtin.copy:
     src: "{{ item.src }}"
-    dest: "{{ tools_dir }}\\{{ item.dest }}"
+    dest: "/tmp/{{ item.dest }}"
+    mode: '0644'
   loop:
     - { src: "../database/schema.sql", dest: "schema.sql" }
     - { src: "../database/seed.sql", dest: "seed.sql" }
   when: kopdes_table_check.stdout | trim != 'kopdes'
 
 - name: Import skema awal KopDes (schema.sql) secara idempotent
-  ansible.windows.win_shell: |
-    $mysql = "{{ mysql_path_query.stdout | trim }}"
-    & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} {{ db_name }} -e "source {{ tools_dir }}\schema.sql"
+  ansible.builtin.shell: |
+    mysql -u root -p"{{ db_root_password }}" {{ db_name }} < /tmp/schema.sql
   when: kopdes_table_check.stdout | trim != 'kopdes'
 
-- name: Import data demo awal KopDes (seed.sql) secara idempotent
-  ansible.windows.win_shell: |
-    $mysql = "{{ mysql_path_query.stdout | trim }}"
-    & $mysql -u root -p"{{ db_root_password }}" -P {{ db_port }} {{ db_name }} -e "source {{ tools_dir }}\seed.sql"
+- name: Import data seed awal KopDes (seed.sql) secara idempotent
+  ansible.builtin.shell: |
+    mysql -u root -p"{{ db_root_password }}" {{ db_name }} < /tmp/seed.sql
   when: kopdes_table_check.stdout | trim != 'kopdes'

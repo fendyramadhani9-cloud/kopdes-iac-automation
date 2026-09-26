@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# ==============================================================================
+# OpenRC Service Script for KopDes PHP Web Server on Alpine Linux
+# ==============================================================================
+
+name="kopdes"
+description="KopDes PHP Application Service"
+command="/usr/bin/php"
+command_args="-S 0.0.0.0:80 -t {{ app_dest_dir }}/public"
+command_background="yes"
+pidfile="/run/kopdes.pid"
+directory="{{ app_dest_dir }}"
+output_log="/var/log/kopdes/access.log"
+error_log="/var/log/kopdes/error.log"
+
+depend() {
+    need net
+    after firewall
+}

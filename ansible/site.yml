@@ -1,14 +1,14 @@
 ---
 # ==============================================================================
 # MASTER ANSIBLE PLAYBOOK: KOPDES INFRASTRUCTURE & APPLICATION DEPLOYMENT
-# Target Environment: 4 Windows VMs Cloned by Terraform
+# Target Environment: 4 Alpine Linux VMs Cloned by Terraform
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Play 1: Baseline Windows Configuration (All Nodes)
+# Play 1: Baseline Alpine Linux Configuration (All Nodes)
 # ------------------------------------------------------------------------------
-- name: "Play 1: Inisialisasi Baseline & Konektivitas Semua Node Windows"
-  hosts: windows
+- name: "Play 1: Inisialisasi Baseline & Paket Dasar Semua Node Alpine Linux"
+  hosts: alpine
   gather_facts: false
   roles:
     - common
@@ -48,9 +48,9 @@
   connection: local
   gather_facts: false
   tasks:
-    - name: Beri jeda 5 detik agar seluruh service Windows stabil
+    - name: Beri jeda 3 detik agar seluruh service stabil
       ansible.builtin.pause:
-        seconds: 5
+        seconds: 3
 
     - name: Uji request HTTP ke HAProxy (http://{{ haproxy_ip }}/)
       ansible.builtin.uri:
@@ -68,7 +68,7 @@
       ansible.builtin.debug:
         msg:
           - "=================================================================="
-          - "🎉 DEPLOYMENT KOPDES MERAH PUTIH BERHASIL!"
+          - "DEPLOYMENT KOPDES MERAH PUTIH BERHASIL (ALPINE LINUX CLUSTER)!"
           - "=================================================================="
           - "HAProxy VIP : http://{{ haproxy_ip }}"
           - "HAProxy Stats: http://{{ haproxy_ip }}:8404/"

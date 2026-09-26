@@ -1,5 +1,6 @@
 # ==============================================================================
 # ANSIBLE GLOBAL VARIABLES: KOPDES AUTOMATION LAYER
+# Target OS: Alpine Linux (Alpine-virt x86_64)
 # ==============================================================================
 
 # =====================================================
@@ -35,9 +36,7 @@ app_env: production
 app_debug: false
 
 # =====================================================
-# Windows Target Paths
+# Linux Target Paths
 # =====================================================
-app_dest_dir: "C:\\kopdes"
-php_dest_dir: "C:\\php"
-haproxy_dest_dir: "C:\\haproxy"
-tools_dir: "C:\\tools"
+app_dest_dir: "/var/www/kopdes"
+tools_dir: "/tmp"

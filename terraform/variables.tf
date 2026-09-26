@@ -45,19 +45,19 @@ variable "vmws_https" {
 # Base VM & Storage Paths
 # =====================================================
 variable "base_vm_id" {
-  description = "ID unik dari Base VM (OVA Windows yang sudah di-import di VMware Workstation). Dapatkan melalui perintah: curl -u user:pass http://host:8697/api/vms"
+  description = "ID unik dari Base VM (OVA Alpine Linux yang sudah di-import di VMware Workstation). Dapatkan melalui perintah: curl -u user:pass http://host:8697/api/vms"
   type        = string
-  default     = "BASE-WINDOWS-VM"
+  default     = "BASE-ALPINE-VM"
 }
 
 variable "vm_target_dir" {
-  description = "Direktori pada Windows Host tempat menyimpan file clone VM (.vmx)"
+  description = "Direktori pada Host tempat menyimpan file clone VM (.vmx)"
   type        = string
   default     = "C:\\VMs\\KopDes"
 }
 
 # =====================================================
-# VM Resource Allocation (RAM Hemat untuk Lab)
+# VM Resource Allocation (RAM Hemat untuk Alpine Linux)
 # =====================================================
 variable "vm_processors" {
   description = "Jumlah vCPU per VM"
@@ -66,7 +66,7 @@ variable "vm_processors" {
 }
 
 variable "vm_memory_mb" {
-  description = "Alokasi RAM per VM dalam megabyte (1024 MB aman untuk Windows Lite di PC Lab)"
+  description = "Alokasi RAM per VM dalam megabyte (512 MB sangat ringan dan optimal untuk Alpine Linux)"
   type        = number
-  default     = 1024
+  default     = 512
 }

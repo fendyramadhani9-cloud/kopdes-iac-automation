@@ -1,24 +1,17 @@
 ---
 # ==============================================================================
-# Role: Common (Baseline Windows Configuration for All 4 VMs)
+# Role: Common (Baseline Alpine Linux Configuration for All 4 VMs)
 # ==============================================================================
 
-- name: Pastikan direktori kerja dasar ada di target Windows
-  ansible.windows.win_file:
-    path: "{{ tools_dir }}"
-    state: directory
-
-- name: Aktifkan aturan Windows Firewall untuk ICMP (Ping)
-  ansible.windows.win_firewall_rule:
-    name: "Allow-ICMPv4-In"
-    localport: any
-    action: allow
-    direction: in
-    protocol: icmpv4
-    state: present
-    enabled: yes
-
-- name: Pastikan ExecutionPolicy PowerShell mengizinkan script otomasi
-  ansible.windows.win_shell: |
-    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
+- name: Pastikan repositori apk terbaru dan Python 3 terpasang
+  ansible.builtin.raw: apk update && apk add --no-cache python3 curl ca-certificates openrc
   changed_when: false
+
+- name: Pastikan direktori kerja aplikasi dan log tersedia
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ app_dest_dir }}"
+    - "/var/log/kopdes"

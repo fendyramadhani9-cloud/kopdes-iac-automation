@@ -1,96 +1,28 @@
 ---
 # ==============================================================================
-# Role: HAProxy (Load Balancer on Windows HAProxy Node 192.168.X.10)
+# Role: HAProxy (Load Balancer on Alpine Linux HAProxy Node 192.168.X.10)
 # ==============================================================================
 
-- name: Pastikan direktori HAProxy dan tool service tersedia
-  ansible.windows.win_file:
-    path: "{{ item }}"
+- name: Pasang paket HAProxy di Alpine Linux
+  ansible.builtin.package:
+    name: haproxy
+    state: present
+
+- name: Pastikan direktori konfigurasi HAProxy tersedia
+  ansible.builtin.file:
+    path: /etc/haproxy
     state: directory
-  loop:
-    - "{{ haproxy_dest_dir }}"
-    - "{{ tools_dir }}\\nssm"
+    mode: '0755'
 
-# =====================================================
-# 1. Setup Binary HAProxy
-# =====================================================
-- name: Cek apakah binary haproxy.exe sudah terpasang
-  ansible.windows.win_stat:
-    path: "{{ haproxy_dest_dir }}\\haproxy.exe"
-  register: haproxy_bin_check
-
-- name: Unduh dan pasang binary HAProxy for Windows
-  ansible.windows.win_shell: |
-    $dest = "{{ tools_dir }}\\haproxy.zip"
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/develar/haproxy-windows/master/haproxy-1.8.8-win64.zip" -OutFile $dest -UseBasicParsing
-    Expand-Archive -Path $dest -DestinationPath "{{ tools_dir }}\\haproxy_extracted" -Force
-    $bin = Get-ChildItem -Path "{{ tools_dir }}\\haproxy_extracted" -Filter "haproxy.exe" -Recurse | Select-Object -First 1
-    if ($bin) {
-      Copy-Item -Path ($bin.DirectoryName + "\*") -Destination "{{ haproxy_dest_dir }}\" -Recurse -Force
-    }
-    Remove-Item $dest, "{{ tools_dir }}\\haproxy_extracted" -Recurse -Force -ErrorAction SilentlyContinue
-  when: not haproxy_bin_check.stat.exists
-
-# =====================================================
-# 2. Setup NSSM (Service Manager)
-# =====================================================
-- name: Cek apakah binary NSSM sudah terpasang di HAProxy node
-  ansible.windows.win_stat:
-    path: "{{ tools_dir }}\\nssm\\nssm.exe"
-  register: nssm_check_haproxy
-
-- name: Unduh dan siapkan NSSM di HAProxy node
-  ansible.windows.win_shell: |
-    $url = "https://nssm.cc/release/nssm-2.24.zip"
-    $dest = "{{ tools_dir }}\\nssm.zip"
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
-    Expand-Archive -Path $dest -DestinationPath "{{ tools_dir }}\\nssm_extracted" -Force
-    Copy-Item "{{ tools_dir }}\nssm_extracted\nssm-2.24\win64\nssm.exe" -Destination "{{ tools_dir }}\nssm\nssm.exe" -Force
-    Remove-Item $dest, "{{ tools_dir }}\\nssm_extracted" -Recurse -Force -ErrorAction SilentlyContinue
-  when: not nssm_check_haproxy.stat.exists
-
-# =====================================================
-# 3. Konfigurasi haproxy.cfg
-# =====================================================
 - name: Render file konfigurasi haproxy.cfg (Round Robin & Health Checks)
-  ansible.windows.win_template:
+  ansible.builtin.template:
     src: haproxy.cfg.j2
-    dest: "{{ haproxy_dest_dir }}\\haproxy.cfg"
+    dest: /etc/haproxy/haproxy.cfg
+    mode: '0644'
   notify: Restart HAProxy
 
-# =====================================================
-# 4. Daftarkan & Jalankan Service HAProxy
-# =====================================================
-- name: Cek status service HAProxy
-  ansible.windows.win_service_info:
-    name: HAProxy
-  register: haproxy_service_check
-
-- name: Daftarkan service HAProxy via NSSM
-  ansible.windows.win_shell: |
-    $nssm = "{{ tools_dir }}\nssm\nssm.exe"
-    & $nssm install HAProxy "{{ haproxy_dest_dir }}\haproxy.exe" "-f {{ haproxy_dest_dir }}\haproxy.cfg"
-    & $nssm set HAProxy AppDirectory "{{ haproxy_dest_dir }}"
-    & $nssm set HAProxy Start SERVICE_AUTO_START
-  when: not haproxy_service_check.exists
-
-- name: Pastikan service HAProxy berjalan dan auto-start
-  ansible.windows.win_service:
-    name: HAProxy
+- name: Pastikan layanan HAProxy berjalan dan auto-start saat booting
+  ansible.builtin.service:
+    name: haproxy
     state: started
-    start_mode: auto
-
-- name: Buka port HTTP (80) dan Stats (8404) pada Windows Firewall
-  ansible.windows.win_firewall_rule:
-    name: "{{ item.name }}"
-    localport: "{{ item.port }}"
-    action: allow
-    direction: in
-    protocol: tcp
-    state: present
     enabled: yes
-  loop:
-    - { name: "Allow-HTTP-Port-80", port: 80 }
-    - { name: "Allow-HAProxy-Stats-8404", port: 8404 }

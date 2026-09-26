@@ -1,69 +1,39 @@
 ---
 # ==============================================================================
-# Role: Webserver (PHP Runtime & KopDes Application on Web01 & Web02)
+# Role: Webserver (PHP Runtime & KopDes Application on Alpine Linux)
 # ==============================================================================
 
-- name: Pastikan direktori PHP, aplikasi, dan tool service tersedia
-  ansible.windows.win_file:
+- name: Pasang runtime PHP dan ekstensi yang dibutuhkan di Alpine Linux
+  ansible.builtin.package:
+    name:
+      - php
+      - php-cli
+      - php-pdo
+      - php-pdo_mysql
+      - php-pdo_sqlite
+      - php-session
+      - php-json
+      - php-curl
+      - php-openssl
+      - php-mbstring
+      - php-tokenizer
+      - php-ctype
+    state: present
+
+- name: Pastikan direktori aplikasi dan log KopDes tersedia
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
+    mode: '0755'
   loop:
-    - "{{ php_dest_dir }}"
     - "{{ app_dest_dir }}"
-    - "{{ tools_dir }}\\nssm"
+    - "/var/log/kopdes"
 
-# =====================================================
-# 1. Setup Runtime PHP
-# =====================================================
-- name: Cek apakah binary PHP sudah terpasang
-  ansible.windows.win_stat:
-    path: "{{ php_dest_dir }}\\php.exe"
-  register: php_binary_check
-
-- name: Unduh runtime PHP (Windows x64)
-  ansible.windows.win_get_url:
-    url: "https://windows.php.net/downloads/releases/archives/php-8.2.20-nts-Win32-vs16-x64.zip"
-    dest: "{{ tools_dir }}\\php.zip"
-  when: not php_binary_check.stat.exists
-
-- name: Ekstrak arsip PHP ke direktori C:\php
-  ansible.windows.win_shell: |
-    Expand-Archive -Path "{{ tools_dir }}\php.zip" -DestinationPath "{{ php_dest_dir }}" -Force
-    Remove-Item "{{ tools_dir }}\php.zip" -Force -ErrorAction SilentlyContinue
-  when: not php_binary_check.stat.exists
-
-- name: Konfigurasi php.ini dengan modul pdo_mysql dan mbstring
-  ansible.windows.win_template:
-    src: php.ini.j2
-    dest: "{{ php_dest_dir }}\\php.ini"
-  notify: Restart KopDesWeb
-
-# =====================================================
-# 2. Setup NSSM (Service Manager)
-# =====================================================
-- name: Cek apakah binary NSSM sudah terpasang
-  ansible.windows.win_stat:
-    path: "{{ tools_dir }}\\nssm\\nssm.exe"
-  register: nssm_binary_check
-
-- name: Unduh dan siapkan NSSM Service Manager
-  ansible.windows.win_shell: |
-    $url = "https://nssm.cc/release/nssm-2.24.zip"
-    $dest = "{{ tools_dir }}\\nssm.zip"
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
-    Expand-Archive -Path $dest -DestinationPath "{{ tools_dir }}\\nssm_extracted" -Force
-    Copy-Item "{{ tools_dir }}\nssm_extracted\nssm-2.24\win64\nssm.exe" -Destination "{{ tools_dir }}\nssm\nssm.exe" -Force
-    Remove-Item $dest, "{{ tools_dir }}\nssm_extracted" -Recurse -Force -ErrorAction SilentlyContinue
-  when: not nssm_binary_check.stat.exists
-
-# =====================================================
-# 3. Deploy Source Code KopDes (Existing Code Base)
-# =====================================================
 - name: Deploy direktori source code KopDes dari repository
-  ansible.windows.win_copy:
-    src: "../{{ item }}/"
-    dest: "{{ app_dest_dir }}\\{{ item }}\\"
+  ansible.builtin.copy:
+    src: "../{{ item }}"
+    dest: "{{ app_dest_dir }}/"
+    mode: '0755'
   loop:
     - config
     - database
@@ -72,39 +42,21 @@
     - public
 
 - name: Inject file konfigurasi .env sesuai identitas node ({{ server_node_name }})
-  ansible.windows.win_template:
+  ansible.builtin.template:
     src: env.j2
-    dest: "{{ app_dest_dir }}\\.env"
+    dest: "{{ app_dest_dir }}/.env"
+    mode: '0644'
   notify: Restart KopDesWeb
 
-# =====================================================
-# 4. Daftarkan & Jalankan Web Service
-# =====================================================
-- name: Cek status service KopDesWeb
-  ansible.windows.win_service_info:
-    name: KopDesWeb
-  register: kopdes_service_check
+- name: Pasang skrip layanan OpenRC untuk web server KopDes
+  ansible.builtin.template:
+    src: kopdes.initd.j2
+    dest: /etc/init.d/kopdes
+    mode: '0755'
+  notify: Restart KopDesWeb
 
-- name: Daftarkan service KopDesWeb via NSSM
-  ansible.windows.win_shell: |
-    $nssm = "{{ tools_dir }}\nssm\nssm.exe"
-    & $nssm install KopDesWeb "{{ php_dest_dir }}\php.exe" "-S 0.0.0.0:80 -t {{ app_dest_dir }}\public"
-    & $nssm set KopDesWeb AppDirectory "{{ app_dest_dir }}"
-    & $nssm set KopDesWeb Start SERVICE_AUTO_START
-  when: not kopdes_service_check.exists
-
-- name: Pastikan service KopDesWeb berjalan dan startup otomatis
-  ansible.windows.win_service:
-    name: KopDesWeb
+- name: Pastikan layanan web server KopDes aktif dan berjalan saat booting
+  ansible.builtin.service:
+    name: kopdes
     state: started
-    start_mode: auto
-
-- name: Buka port 80 pada Windows Firewall
-  ansible.windows.win_firewall_rule:
-    name: "Allow-HTTP-Port-80"
-    localport: 80
-    action: allow
-    direction: in
-    protocol: tcp
-    state: present
     enabled: yes

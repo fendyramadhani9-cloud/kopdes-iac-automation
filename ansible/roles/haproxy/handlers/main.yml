@@ -1,5 +1,5 @@
 ---
 - name: Restart HAProxy
-  ansible.windows.win_service:
-    name: HAProxy
+  ansible.builtin.service:
+    name: haproxy
     state: restarted

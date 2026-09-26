@@ -1,6 +1,6 @@
 # KopDes Merah Putih: Otomasi Infrastruktur dan Platform Koperasi Desa
 
-Implementasi Infrastructure as Code (IaC) dan manajemen konfigurasi multi-tier untuk Platform Koperasi Desa KopDes Merah Putih, diotomatisasi menggunakan Terraform, Ansible, dan VMware Workstation.
+Implementasi Infrastructure as Code (IaC) dan manajemen konfigurasi multi-tier untuk Platform Koperasi Desa KopDes Merah Putih, diotomatisasi menggunakan Terraform, Ansible, dan VMware Workstation berbasis template Alpine Linux yang sangat ringan (ultralightweight).
 
 ---
 
@@ -11,7 +11,7 @@ Implementasi Infrastructure as Code (IaC) dan manajemen konfigurasi multi-tier u
 - [Topologi Infrastruktur](#topologi-infrastruktur)
 - [Pemisahan Tanggung Jawab](#pemisahan-tanggung-jawab)
 - [Teknologi yang Digunakan](#teknologi-yang-digunakan)
-- [Manajemen Layanan dan Runtime](#manajemen-layanan-dan-runtime)
+- [Manajemen Layanan dan Runtime (OpenRC)](#manajemen-layanan-dan-runtime-openrc)
 - [Role Pengguna dan Hak Akses](#role-pengguna-dan-hak-akses)
 - [Struktur Direktori Repository](#struktur-direktori-repository)
 - [Panduan Deployment](#panduan-deployment)
@@ -23,7 +23,9 @@ Implementasi Infrastructure as Code (IaC) dan manajemen konfigurasi multi-tier u
 
 KopDes Merah Putih adalah platform digital yang dirancang untuk mengelola unit usaha koperasi desa, rantai pasok komoditas lokal, registrasi keanggotaan warga, serta pencatatan transaksi kasir Point of Sale (POS).
 
-Repository ini menyediakan lapisan otomasi infrastruktur lengkap untuk melakukan provisioning, konfigurasi, dan orkestrasi platform pada cluster multi-node dengan ketersediaan tinggi (High Availability). Otomasi memanfaatkan HashiCorp Terraform untuk mengelola siklus hidup cloning Virtual Machine melalui VMware Workstation REST API, serta Ansible untuk menjalankan manajemen konfigurasi yang idempotent, penyediaan runtime, dan deployment kode aplikasi melalui protokol WinRM.
+Repository ini menyediakan lapisan otomasi infrastruktur lengkap untuk melakukan provisioning, konfigurasi, dan orkestrasi platform pada cluster multi-node dengan ketersediaan tinggi (High Availability). Proyek ini memanfaatkan template **Alpine Linux (Alpine-virt x86_64, ~145 MB)** yang sangat hemat memori (hanya membutuhkan 256MB - 512MB RAM per VM) dan memiliki waktu booting instan.
+
+Otomasi memanfaatkan HashiCorp Terraform untuk mengelola siklus hidup cloning Virtual Machine melalui VMware Workstation REST API, serta Ansible untuk menjalankan manajemen konfigurasi yang idempotent, penyediaan runtime, dan deployment kode aplikasi melalui protokol SSH standar.
 
 ---
 
@@ -35,9 +37,9 @@ Arsitektur sistem menerapkan kluster produksi empat node yang berada di belakang
 flowchart TD
     subgraph Host["Host PC (VMware Workstation Pro)"]
         vmrest["VMware REST API Engine\nPort: 8697"]
-        BaseVM["Golden Master VM (Template Windows)\n[Sumber Clone]"]
+        BaseVM["Base VM (Alpine-virt x86_64 OVA)\n[Sumber Clone ~145MB]"]
         
-        subgraph Cluster["Kluster Node Target"]
+        subgraph Cluster["Kluster Node Target (Alpine Linux)"]
             HAProxy["Node 1: HAProxy\n[Layer 7 Load Balancer]"]
             Web01["Node 2: WEB01\n[PHP Application Runtime 1]"]
             Web02["Node 3: WEB02\n[PHP Application Runtime 2]"]
@@ -48,7 +50,7 @@ flowchart TD
     subgraph ControlNode["Controller VM / Workstation"]
         GitRepo["Git Repository"]
         TF["Terraform Engine\n[elsudano/vmworkstation]"]
-        Ansible["Ansible Engine\n[WinRM Transport]"]
+        Ansible["Ansible Engine\n[SSH Transport Port 22]"]
     end
 
     subgraph Clients["Akses Pengguna"]
@@ -63,7 +65,7 @@ flowchart TD
     BaseVM -.-> Web02
     BaseVM -.-> DB01
 
-    Ansible -->|"WinRM (Port 5985) Provisioning"| Cluster
+    Ansible -->|"SSH (Port 22) Provisioning"| Cluster
 
     Browser -->|"HTTP (Port 80)"| HAProxy
     HAProxy -->|"Distribusi Round Robin"| Web01
@@ -76,14 +78,14 @@ flowchart TD
 
 ## Topologi Infrastruktur
 
-Kluster terdiri dari empat Virtual Machine yang terhubung dalam satu segmen jaringan virtual host-only atau NAT yang terisolasi.
+Kluster terdiri dari empat Virtual Machine Alpine Linux yang terhubung dalam satu segmen jaringan virtual terisolasi.
 
-| Hostname | Peran (Role) | Sistem Operasi | IP Default | Layanan yang Dijalankan |
-| :--- | :--- | :--- | :--- | :--- |
-| `KopDes-HAProxy` | Load Balancer | Windows 64-bit | `192.168.X.10` | HAProxy (Port 80), Dashboard Statistik (Port 8404) |
-| `KopDes-Web01` | Server Aplikasi 1 | Windows 64-bit | `192.168.X.11` | PHP Built-in Server (Port 8080) di-wrap oleh NSSM |
-| `KopDes-Web02` | Server Aplikasi 2 | Windows 64-bit | `192.168.X.12` | PHP Built-in Server (Port 8080) di-wrap oleh NSSM |
-| `KopDes-DB01` | Database Server | Windows 64-bit | `192.168.X.13` | MariaDB 10.11 Enterprise LTS (Port 3306) |
+| Hostname | Peran (Role) | Sistem Operasi | IP Default | RAM Alokasi | Layanan yang Dijalankan |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `KopDes-HAProxy` | Load Balancer | Alpine Linux (virt) | `192.168.X.10` | 512 MB | HAProxy (Port 80), Dashboard Statistik (Port 8404) |
+| `KopDes-Web01` | Server Aplikasi 1 | Alpine Linux (virt) | `192.168.X.11` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
+| `KopDes-Web02` | Server Aplikasi 2 | Alpine Linux (virt) | `192.168.X.12` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
+| `KopDes-DB01` | Database Server | Alpine Linux (virt) | `192.168.X.13` | 512 MB | MariaDB 10.x Server (Port 3306) |
 
 *Catatan: Oktet subnet `X` dapat disesuaikan secara terpusat melalui variabel konfigurasi untuk mendukung segmentasi lab atau multi-environment.*
 
@@ -95,10 +97,10 @@ Setiap komponen dalam repository memiliki batasan fungsi yang jelas:
 
 | Lapisan | Tanggung Jawab Utama | Batasan |
 | :--- | :--- | :--- |
-| **Terraform** | Mengelola siklus hidup Virtual Machine: cloning dari template base, alokasi vCPU, memori RAM, konfigurasi adapter jaringan, dan pembuatan disk virtual. | Tidak menginstal software aplikasi, tidak mengonfigurasi database, dan tidak menginjeksi environment runtime. |
-| **Ansible** | Orkestrasi pasca-booting: standardisasi firewall Windows, penyediaan dependency, instalasi database, registrasi Windows Service via NSSM, dan injeksi konfigurasi `.env`. | Tidak bertanggung jawab atas pembuatan atau penghapusan VM pada level hypervisor. |
+| **Terraform** | Mengelola siklus hidup Virtual Machine: cloning dari template base Alpine Linux, alokasi vCPU, memori RAM, konfigurasi adapter jaringan, dan pembuatan disk virtual. | Tidak menginstal paket software, tidak mengonfigurasi database, dan tidak menginjeksi environment runtime. |
+| **Ansible** | Orkestrasi pasca-booting: instalasi paket via `apk`, inisialisasi database MariaDB, deployment source code ke `/var/www/kopdes`, registrasi OpenRC service, dan injeksi `.env`. | Tidak bertanggung jawab atas pembuatan atau penghapusan VM pada level hypervisor. |
 | **Aplikasi Web** | Menjalankan logika bisnis platform koperasi: autentikasi, manajemen katalog, transaksi kasir, dan penentuan koordinat lokasi unit usaha. | Source code aplikasi terisolasi dari perkakas deployment dan hypervisor. |
-| **Base Virtual Machine** | Template gold image yang memuat OS Windows, VMware Tools aktif, dan konfigurasi WinRM listener siap pakai. | Hanya berfungsi sebagai sumber cloning (read-only) dan tidak melayani traffic aplikasi secara langsung. |
+| **Base Virtual Machine** | Template gold image Alpine Linux (~145 MB) dengan OpenSSH aktif dan kredensial root standar. | Hanya berfungsi sebagai sumber cloning (read-only) dan tidak melayani traffic aplikasi secara langsung. |
 
 ---
 
@@ -107,31 +109,30 @@ Setiap komponen dalam repository memiliki batasan fungsi yang jelas:
 ### Infrastruktur dan Otomasi
 - **Hypervisor**: VMware Workstation Pro 25H2
 - **Antarmuka Hypervisor**: VMware REST API (`vmrest.exe`)
+- **Sistem Operasi Tamu**: Alpine Linux (Alpine-virt x86_64)
 - **Infrastructure as Code**: Terraform v1.5+ dengan provider `elsudano/vmworkstation` v1.0.4
-- **Configuration Management**: Ansible Core 2.15+ dengan koleksi `ansible.windows`
-- **Protokol Transport**: Windows Remote Management (WinRM HTTP Port 5985)
+- **Configuration Management**: Ansible Core 2.15+
+- **Protokol Transport**: Secure Shell (SSH Port 22)
 
 ### Platform dan Runtime Aplikasi
-- **Load Balancer**: HAProxy 2.8+ untuk Windows (Layer 7 Round Robin, Health Checks aktif)
-- **Runtime Aplikasi**: PHP 8.2+ 64-bit Non-Thread Safe
-- **Manajer Layanan**: Non-Sucking Service Manager (NSSM)
-- **Database Engine**: MariaDB 10.11 Enterprise LTS
+- **Load Balancer**: HAProxy (Layer 7 Round Robin, Health Checks aktif)
+- **Runtime Aplikasi**: PHP 8.x (Alpine APK Package)
+- **Manajer Layanan**: OpenRC (`openrc-run`, `rc-service`, `rc-update`)
+- **Database Engine**: MariaDB 10.x (Alpine APK Package)
 - **Frontend Aplikasi**: Plain HTML5, Modern Vanilla CSS3, JavaScript Modular, Leaflet.js
 
 ---
 
-## Manajemen Layanan dan Runtime
+## Manajemen Layanan dan Runtime (OpenRC)
 
-### Penggunaan NSSM pada Windows
-Utilitas portabel pada Windows (seperti binary CLI `php.exe` dan `haproxy.exe`) tidak memiliki fungsi integrasi bawaan dengan Windows Service Control Manager (`sc.exe`). Penggunaan perintah `sc.exe` secara langsung akan memicu kegagalan `Error 1053`.
-
-Untuk menjaga reliabilitas sistem, Ansible menggunakan **Non-Sucking Service Manager (`nssm.exe`)** sebagai pembungkus proses menjadi Windows Service sejati:
-- `KopDesWeb`: Membungkus proses web server PHP pada Web01 dan Web02 dengan kemampuan restart otomatis saat terjadi crash serta berjalan di background service.
-- `HAProxy`: Membungkus proses load balancer HAProxy dengan pencatatan log mandiri dan kemampuan reload konfigurasi secara graceful.
+Alpine Linux menggunakan **OpenRC** sebagai sistem inisialisasi dan manajemen layanan bawaan yang sangat ringan:
+- `kopdes`: Skrip layanan OpenRC (`/etc/init.d/kopdes`) membungkus web server PHP dengan logging terpusat ke `/var/log/kopdes/` dan restart otomatis.
+- `haproxy`: Dikelola secara native melalui `rc-service haproxy` dengan health check aktif ke backend web.
+- `mariadb`: Dikelola melalui `rc-service mariadb` dengan isolasi izin akses jaringan per subnet.
 
 ### Idempotensi Playbook Ansible
-- **Penyediaan Database**: Role MariaDB melakukan verifikasi terhadap keberadaan skema database sebelum menjalankan migrasi SQL, mencegah data tertimpa pada eksekusi ulang playbook.
-- **Pengecekan Layanan**: Task Ansible memanfaatkan modul `win_service_info` dan pengecekan path direktori untuk memastikan paket binary hanya diunduh saat belum terpasang.
+- **Penyediaan Database**: Role MariaDB melakukan pengecekan direktori `/var/lib/mysql/mysql` dan keberadaan tabel sebelum migrasi SQL, memastikan data tidak tertimpa saat playbook dijalankan berulang kali.
+- **Penyediaan Paket**: Seluruh task memanfaatkan manajer paket native `apk` yang otomatis melewatkan instalasi jika dependensi sudah terpasang.
 
 ---
 
@@ -153,22 +154,22 @@ Platform KopDes menyediakan sistem kontrol akses berbasis peran (RBAC) dengan kr
 kopdes/
 |-- terraform/                         # Infrastructure as Code (Provisioning VM)
 |   |-- versions.tf                    # Deklarasi provider elsudano/vmworkstation
-|   |-- variables.tf                   # Definisi variabel (Subnet ID, Host, VM IDs)
+|   |-- variables.tf                   # Definisi variabel (Subnet ID, Host, VM IDs, RAM)
 |   |-- terraform.tfvars               # Nilai variabel deployment lingkungan
 |   |-- main.tf                        # Deklarasi resource untuk 4 VM target
 |   `-- outputs.tf                     # Output alokasi IP dan topologi kluster
 |
 |-- ansible/                           # Manajemen Konfigurasi dan Deployment
-|   |-- ansible.cfg                    # Konfigurasi WinRM, timeout, dan transport
-|   |-- inventory.ini                  # Definisi inventory host target
+|   |-- ansible.cfg                    # Konfigurasi SSH, timeout, dan transport
+|   |-- inventory.ini                  # Definisi inventory host target Alpine Linux
 |   |-- group_vars/
 |   |   `-- all.yml                    # Variabel global, path direktori, kredensial
 |   |-- site.yml                       # Master playbook multi-play
 |   `-- roles/
-|       |-- common/                    # Baseline aturan firewall dan direktori kerja
-|       |-- database/                  # Instalasi MariaDB 10.x, hak akses, import data
-|       |-- webserver/                 # Runtime PHP, service NSSM, deploy kode, .env dinamis
-|       `-- haproxy/                   # Binary HAProxy, routing Round Robin, health check
+|       |-- common/                    # Baseline paket Alpine (python3, curl, openrc)
+|       |-- database/                  # Instalasi MariaDB, inisialisasi datadir, import data
+|       |-- webserver/                 # Runtime PHP, layanan OpenRC, deploy kode, .env dinamis
+|       `-- haproxy/                   # Paket HAProxy, konfigurasi Round Robin, health check
 |
 |-- config/                            # Konfigurasi database dan environment aplikasi
 |-- database/                          # Skema SQL produksi dan data seed awal
@@ -185,7 +186,7 @@ kopdes/
 
 ## Panduan Deployment
 
-Panduan lengkap instalasi dan deployment dari awal (mulai dari persiapan template OVA, aktivasi VMware REST API, provisioning Terraform, hingga deployment Ansible) tersedia pada dokumen tersendiri:
+Panduan lengkap instalasi dan deployment dari awal (mulai dari persiapan template OVA Alpine Linux, aktivasi VMware REST API, provisioning Terraform, hingga deployment Ansible) tersedia pada dokumen tersendiri:
 
 **[Panduan Lengkap Deployment dari Awal (TUTORIAL.md)](TUTORIAL.md)**
 

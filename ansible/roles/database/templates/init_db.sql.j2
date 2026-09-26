@@ -4,6 +4,9 @@
 
 CREATE DATABASE IF NOT EXISTS `{{ db_name }}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Atur password root MariaDB jika belum
+ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ db_root_password }}';
+
 -- Akses aman khusus dari node Web01 ({{ web01_ip }})
 CREATE USER IF NOT EXISTS '{{ db_user }}'@'{{ web01_ip }}' IDENTIFIED BY '{{ db_password }}';
 GRANT ALL PRIVILEGES ON `{{ db_name }}`.* TO '{{ db_user }}'@'{{ web01_ip }}';

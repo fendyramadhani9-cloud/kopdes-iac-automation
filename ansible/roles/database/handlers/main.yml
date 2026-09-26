@@ -1,5 +1,5 @@
 ---
-- name: Restart KopDesWeb
+- name: Restart MariaDB
   ansible.builtin.service:
-    name: kopdes
+    name: mariadb
     state: restarted
