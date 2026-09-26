@@ -47,8 +47,8 @@ flowchart TD
         end
     end
 
-    subgraph ControlNode["Controller VM / Workstation"]
-        GitRepo["Git Repository"]
+    subgraph ControlNode["VM 5: Controller (Alpine Linux)"]
+        GitRepo["Git Repository (KopDes)"]
         TF["Terraform Engine\n[elsudano/vmworkstation]"]
         Ansible["Ansible Engine\n[SSH Transport Port 22]"]
     end
@@ -57,8 +57,7 @@ flowchart TD
         Browser["Web Browser Klien"]
     end
 
-    GitRepo --> TF
-    TF -->|"Panggilan REST API (parallelism=1)"| vmrest
+    ControlNode -->|"Panggilan REST API (parallelism=1)"| vmrest
     vmrest -->|"Clone VM Instance"| BaseVM
     BaseVM -.-> HAProxy
     BaseVM -.-> Web01
@@ -78,10 +77,11 @@ flowchart TD
 
 ## Topologi Infrastruktur
 
-Kluster terdiri dari empat Virtual Machine Alpine Linux yang terhubung dalam satu segmen jaringan virtual terisolasi.
+Sistem menggunakan total **5 Virtual Machine berbasis Alpine Linux** yang berasal dari template OVA yang sama (`Alpine-virt-3.24.1-x86_64`):
 
 | Hostname | Peran (Role) | Sistem Operasi | IP Default | RAM Alokasi | Layanan yang Dijalankan |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `KopDes-Controller` | Workstation Otomasi | Alpine Linux (virt) | `192.168.X.2` / DHCP | 512 MB | Git, Terraform, Ansible Core, OpenSSH |
 | `KopDes-HAProxy` | Load Balancer | Alpine Linux (virt) | `192.168.X.10` | 512 MB | HAProxy (Port 80), Dashboard Statistik (Port 8404) |
 | `KopDes-Web01` | Server Aplikasi 1 | Alpine Linux (virt) | `192.168.X.11` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
 | `KopDes-Web02` | Server Aplikasi 2 | Alpine Linux (virt) | `192.168.X.12` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
