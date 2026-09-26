@@ -1,14 +1,14 @@
-# Panduan Deployment End-to-End: Otomasi Infrastruktur KopDes (Kluster 5 VM Alpine Linux)
+# Panduan Deployment End-to-End: Otomasi Infrastruktur KopDes (Kluster 6 VM Alpine Linux)
 
 Panduan ini menyajikan langkah-demi-langkah yang komprehensif untuk mendeploy kluster ketersediaan tinggi (High Availability) KopDes Merah Putih dari awal (nol) pada VMware Workstation Pro. 
 
-Seluruh sistem dirancang menggunakan **5 Virtual Machine berbasis Alpine Linux** (`Alpine-virt-3.24.1-x86_64, ~142 MB`) yang berasal dari satu file template OVA yang sama, sehingga sangat ringan, cepat, dan tidak lagi bergantung pada Windows ataupun distro lain seperti Ubuntu/Debian untuk menjalankan skrip otomasi.
+Seluruh sistem dirancang menggunakan total **6 Virtual Machine berbasis Alpine Linux** (`Alpine-virt-3.24.1-x86_64, ~142 MB`) yang berasal dari satu file template OVA yang sama, sehingga sangat ringan, cepat, dan tidak lagi bergantung pada Windows ataupun distro lain seperti Ubuntu/Debian untuk menjalankan skrip otomasi.
 
 ---
 
 ## Daftar Isi
 
-1. [Konsep Arsitektur 5 VM Alpine Linux](#1-konsep-arsitektur-5-vm-alpine-linux)
+1. [Konsep Arsitektur 6 VM Alpine Linux](#1-konsep-arsitektur-6-vm-alpine-linux)
 2. [Prasyarat dan Kebutuhan Sistem](#2-prasyarat-dan-kebutuhan-sistem)
 3. [Tahap 1: Setup VM Controller (Alpine Linux)](#3-tahap-1-setup-vm-controller-alpine-linux)
 4. [Tahap 2: Setup Base VM Template (Alpine Linux)](#4-tahap-2-setup-base-vm-template-alpine-linux)
@@ -23,25 +23,25 @@ Seluruh sistem dirancang menggunakan **5 Virtual Machine berbasis Alpine Linux**
 
 ---
 
-## 1. Konsep Arsitektur 5 VM Alpine Linux
+## 1. Konsep Arsitektur 6 VM Alpine Linux
 
-Sistem terdiri dari total **5 Virtual Machine** yang semuanya berbasis **Alpine Linux**:
+Sistem terdiri dari total **6 Virtual Machine** di VMware Workstation yang semuanya berbasis **Alpine Linux**:
 
 ```mermaid
 flowchart TD
     subgraph Host["Host PC Windows (VMware Workstation Pro)"]
         vmrest["VMware REST API (vmrest.exe)\nPort: 8697"]
-        BaseVM["Base VM Template (Alpine Linux OVA)\n[Kondisi: Powered Off / Sumber Clone]"]
+        BaseVM["VM 2: Base VM Template (Alpine Linux OVA)\n[Kondisi: Powered Off / Sumber Clone]"]
         
         subgraph TargetCluster["4 Node Kluster Target (Clone Otomatis oleh Terraform)"]
-            HAProxy["VM 1: HAProxy\n192.168.X.10\n[Load Balancer]"]
-            Web01["VM 2: WEB01\n192.168.X.11\n[PHP App Server 1]"]
-            Web02["VM 3: WEB02\n[PHP App Server 2]\n192.168.X.12"]
-            DB01["VM 4: DB01\n[MariaDB Server]\n192.168.X.13"]
+            HAProxy["VM 3: HAProxy\n192.168.X.10\n[Load Balancer]"]
+            Web01["VM 4: WEB01\n192.168.X.11\n[PHP App Server 1]"]
+            Web02["VM 5: WEB02\n192.168.X.12\n[PHP App Server 2]"]
+            DB01["VM 6: DB01\n192.168.X.13\n[MariaDB Server]"]
         end
     end
 
-    subgraph ControllerVM["VM 5: Controller (Alpine Linux)"]
+    subgraph ControllerVM["VM 1: Controller (Alpine Linux)"]
         GitRepo["Git (Kloning Repo KopDes)"]
         TF["Terraform (Eksekusi Provisioning)"]
         Ansible["Ansible (Deployment via SSH)"]
@@ -67,9 +67,13 @@ flowchart TD
     Web02 -->|"TCP Port 3306"| DB01
 ```
 
-- **VM 1 (Controller VM)**: Dibuat pertama kali dari import OVA Alpine. Berfungsi sebagai workstation otomasi yang meng-clone repository GitHub KopDes, menjalankan Terraform, dan mengeksekusi Ansible.
-- **Base VM Template**: Dibuat dari OVA Alpine yang sama, disiapkan SSH-nya, lalu dimatikan (*powered off*). VM ini menjadi sumber clone murni bagi Terraform.
-- **VM 2 s.d. VM 5 (4 Node Target)**: Dibuat secara otomatis oleh Terraform melalui cloning Base VM.
+Rincian 6 Virtual Machine dalam sistem:
+1. **VM 1 (`KopDes-Controller`)**: Workstation otomasi siswa tempat `git clone` repository KopDes, menjalankan Terraform, dan mengeksekusi Ansible.
+2. **VM 2 (`Alpine-Base-VM`)**: Master golden image template (dibuat dari OVA, disiapkan SSH-nya, lalu dimatikan / *powered off* sebagai sumber clone murni Terraform).
+3. **VM 3 (`KopDes-HAProxy`)**: Node Load Balancer Layer 7 (IP: `192.168.X.10`) hasil clone Terraform.
+4. **VM 4 (`KopDes-Web01`)**: Node Web Application Server 1 (IP: `192.168.X.11`) hasil clone Terraform.
+5. **VM 5 (`KopDes-Web02`)**: Node Web Application Server 2 (IP: `192.168.X.12`) hasil clone Terraform.
+6. **VM 6 (`KopDes-DB01`)**: Node Database Server MariaDB (IP: `192.168.X.13`) hasil clone Terraform.
 
 ---
 
@@ -79,7 +83,7 @@ flowchart TD
 - **Sistem Operasi**: Windows 10 atau Windows 11 (64-bit)
 - **Perangkat Lunak Virtualisasi**: VMware Workstation Pro 25H2 (atau versi 17+)
 - **Prosesor**: Minimal 2 Core Fisik (4 Thread), VT-x / AMD-V aktif pada BIOS/UEFI
-- **Memori RAM**: Minimal 8 GB (seluruh 5 VM Alpine Linux hanya membutuhkan total ~2.5 GB RAM)
+- **Memori RAM**: Minimal 8 GB (seluruh 6 VM Alpine Linux hanya membutuhkan total ~3 GB RAM)
 - **Ruang Penyimpanan**: Minimal 10 GB ruang kosong (media SSD / HDD)
 - **File Template Base**: `D:\Virtual Machines\ISO\Alpine-virt-3.24.1-x86_64-v1_root-root_alpine-alpine.ova` (~142 MB)
 

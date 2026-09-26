@@ -77,17 +77,18 @@ flowchart TD
 
 ## Topologi Infrastruktur
 
-Sistem menggunakan total **5 Virtual Machine berbasis Alpine Linux** yang berasal dari template OVA yang sama (`Alpine-virt-3.24.1-x86_64`):
+Sistem menggunakan total **6 Virtual Machine berbasis Alpine Linux** di VMware Workstation yang semuanya berasal dari template OVA yang sama (`Alpine-virt-3.24.1-x86_64`):
 
-| Hostname | Peran (Role) | Sistem Operasi | IP Default | RAM Alokasi | Layanan yang Dijalankan |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `KopDes-Controller` | Workstation Otomasi | Alpine Linux (virt) | `192.168.X.2` / DHCP | 512 MB | Git, Terraform, Ansible Core, OpenSSH |
-| `KopDes-HAProxy` | Load Balancer | Alpine Linux (virt) | `192.168.X.10` | 512 MB | HAProxy (Port 80), Dashboard Statistik (Port 8404) |
-| `KopDes-Web01` | Server Aplikasi 1 | Alpine Linux (virt) | `192.168.X.11` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
-| `KopDes-Web02` | Server Aplikasi 2 | Alpine Linux (virt) | `192.168.X.12` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
-| `KopDes-DB01` | Database Server | Alpine Linux (virt) | `192.168.X.13` | 512 MB | MariaDB 10.x Server (Port 3306) |
+| No | Hostname | Peran (Role) | Status VM | IP Default | RAM | Layanan Utama |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `KopDes-Controller` | Workstation Otomasi | Aktif | `192.168.X.2` / DHCP | 512 MB | Git, Terraform, Ansible Core, OpenSSH |
+| 2 | `Alpine-Base-VM` | Template Master Clone | Powered Off | - | 512 MB | Golden Image sumber cloning Terraform |
+| 3 | `KopDes-HAProxy` | Load Balancer | Aktif | `192.168.X.10` | 512 MB | HAProxy (Port 80), Dashboard Stats (8404) |
+| 4 | `KopDes-Web01` | Server Aplikasi 1 | Aktif | `192.168.X.11` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
+| 5 | `KopDes-Web02` | Server Aplikasi 2 | Aktif | `192.168.X.12` | 512 MB | PHP CLI Service (Port 80) via OpenRC |
+| 6 | `KopDes-DB01` | Database Server | Aktif | `192.168.X.13` | 512 MB | MariaDB 10.x Server (Port 3306) |
 
-*Catatan: Oktet subnet `X` dapat disesuaikan secara terpusat melalui variabel konfigurasi untuk mendukung segmentasi lab atau multi-environment.*
+*Catatan: Total 6 VM hanya membutuhkan alokasi memori gabungan sekitar 3 GB RAM pada Host PC.*
 
 ---
 
