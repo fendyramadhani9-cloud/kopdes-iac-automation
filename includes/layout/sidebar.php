@@ -34,11 +34,15 @@ $activeNav = match($currentPage) {
 
     <!-- Quick Action for Head Gov -->
     <?php if ($role === 'HEAD_GOV'): ?>
-        <div class="sidebar-action">
+        <div class="sidebar-action" style="display:flex;flex-direction:column;gap:8px;">
             <button type="button" class="btn btn-primary btn-block btn-spawn-sidebar" onclick="openSpawnModal()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>+ Spawn KopDes</span>
             </button>
+            <a href="index.php?page=managers#tambah-manager" class="btn btn-secondary btn-block" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.8125rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                <span>+ Akun Manager</span>
+            </a>
         </div>
     <?php endif; ?>
 
@@ -62,7 +66,7 @@ $activeNav = match($currentPage) {
                 <li class="nav-item">
                     <a href="index.php?page=managers" class="nav-link <?= $activeNav === 'managers' ? 'active' : '' ?>">
                         <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                        <span>Managers</span>
+                        <span>Kelola Manager</span>
                     </a>
                 </li>
                 <li class="nav-item">

@@ -66,11 +66,15 @@ require __DIR__ . '/../../includes/layout/header.php';
                 Kelola distribusi, spawn unit koperasi baru, dan monitor transaksi ekonomi desa secara terpusat.
             </p>
         </div>
-        <div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button type="button" class="btn btn-primary btn-lg" onclick="openSpawnModal()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>+ Spawn KopDes</span>
             </button>
+            <a href="index.php?page=managers#tambah-manager" class="btn btn-secondary btn-lg" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                <span>+ Tambah Akun Manager</span>
+            </a>
         </div>
     </div>
 </div>
@@ -93,6 +97,7 @@ require __DIR__ . '/../../includes/layout/header.php';
             <span class="stat-label">Total Manager</span>
             <span class="stat-value"><?= number_format($totalManagers) ?></span>
             <span class="stat-meta">Pengelola unit usaha desa</span>
+            <a href="index.php?page=managers#tambah-manager" style="font-size:0.75rem;color:var(--primary-700);font-weight:700;text-decoration:none;margin-top:6px;display:inline-block;">+ Tambah Akun Manager &rarr;</a>
         </div>
         <div class="stat-icon stat-icon-manager" title="Managers">
             <?= ui_icon('manager', '', 24) ?>

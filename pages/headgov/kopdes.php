@@ -29,7 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         flash('success', 'Status KopDes berhasil diperbarui.');
         redirect('index.php?page=kopdes');
     }
+
+    if ($action === 'assign_manager') {
+        $managerId = (int)($_POST['manager_id'] ?? 0);
+        $newMgrId = ($managerId > 0) ? $managerId : null;
+        $stmt = $pdo->prepare("UPDATE kopdes SET manager_id = ? WHERE id = ?");
+        $stmt->execute([$newMgrId, $kopdesId]);
+        flash('success', 'Penugasan manager untuk KopDes berhasil diperbarui.');
+        redirect('index.php?page=kopdes');
+    }
 }
+
+// Ambil semua manager untuk modal penugasan
+$allManagers = $pdo ? $pdo->query("SELECT id, name, email FROM users WHERE role = 'MANAGER' ORDER BY name ASC")->fetchAll() : [];
 
 // Filter & Search
 $search = trim($_GET['search'] ?? '');
@@ -149,6 +161,9 @@ require __DIR__ . '/../../includes/layout/header.php';
                                 <?php else: ?>
                                     <span style="color:var(--slate-400);font-style:italic;">Belum Ditugaskan</span>
                                 <?php endif; ?>
+                                <button type="button" class="btn btn-secondary btn-sm" style="margin-top:4px;padding:2px 7px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;" onclick="openKopdesAssignModal(<?= $kd['id'] ?>, '<?= e(addslashes($kd['name'])) ?>', <?= (int)($kd['manager_id'] ?? 0) ?>)">
+                                    <?= !empty($kd['manager_name']) ? 'Ganti Manager' : '+ Tugaskan' ?>
+                                </button>
                             </td>
                             <td>
                                 <div style="font-size:0.8125rem;display:flex;flex-direction:column;gap:3px;">
@@ -192,5 +207,67 @@ require __DIR__ . '/../../includes/layout/header.php';
         </table>
     </div>
 </div>
+
+<!-- Modal Tugaskan Manager ke KopDes -->
+<div class="modal-backdrop" id="kopdesAssignModalBackdrop" style="display:none;" onclick="if(event.target === this) closeKopdesAssignModal()">
+    <div class="modal-dialog modal-dialog-sm" style="max-width:480px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title">Tugaskan Manager KopDes</h3>
+                    <span class="modal-subtitle" id="kopdesAssignSubtitle">Pilih penanggung jawab pengelola</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeKopdesAssignModal()">&times;</button>
+            </div>
+            <form method="POST" action="index.php?page=kopdes">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="assign_manager">
+                <input type="hidden" name="kopdes_id" id="modalKopdesId" value="">
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Nama KopDes</label>
+                        <input type="text" id="modalKopdesName" class="form-control" readonly style="background:var(--slate-100);">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="modalManagerSelect">Pilih Akun Manager</label>
+                        <select name="manager_id" id="modalManagerSelect" class="form-control" required>
+                            <option value="0">-- Kosongkan (Belum Ditugaskan) --</option>
+                            <?php foreach ($allManagers as $mgr): ?>
+                                <option value="<?= $mgr['id'] ?>">
+                                    <?= e($mgr['name']) ?> (<?= e($mgr['email']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeKopdesAssignModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Manager</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openKopdesAssignModal(kopdesId, kopdesName, currentManagerId) {
+    document.getElementById('modalKopdesId').value = kopdesId;
+    document.getElementById('modalKopdesName').value = kopdesName;
+    document.getElementById('kopdesAssignSubtitle').innerText = 'Unit: ' + kopdesName;
+    
+    const sel = document.getElementById('modalManagerSelect');
+    sel.value = currentManagerId || 0;
+
+    const modal = document.getElementById('kopdesAssignModalBackdrop');
+    modal.style.display = 'flex';
+}
+
+function closeKopdesAssignModal() {
+    document.getElementById('kopdesAssignModalBackdrop').style.display = 'none';
+}
+</script>
 
 <?php require __DIR__ . '/../../includes/layout/footer.php'; ?>

@@ -143,9 +143,9 @@ Platform KopDes menyediakan sistem kontrol akses berbasis peran (RBAC) dengan kr
 
 | Identifier Role | Username Default | Password Default | Lingkup Otoritas |
 | :--- | :--- | :--- | :--- |
-| `HEAD_GOV` | `head@gov.local` | `password123` | Administrator wilayah: membuat unit koperasi baru (+ Spawn KopDes), audit omzet kumulatif, pendaftaran manager, dan pemantauan kluster. |
-| `MANAGER` | `manager@gov.local` | `password123` | Pengelola unit usaha: manajemen etalase komoditas, registrasi anggota warga desa, dan pencatatan transaksi kasir. |
-| `CITIZEN` | `citizen@gov.local` | `password123` | Warga desa: akses katalog komoditas koperasi, pengajuan keanggotaan, pemesanan produk desa, dan melihat nota transaksi. |
+| `HEAD_GOV` | `head@gov.local` | `password123` | Administrator wilayah: membuat unit koperasi baru (+ Spawn KopDes), audit omzet kumulatif, penambahan akun manager (+ Tambah Akun Manager), penugasan unit KopDes, dan pemantauan kluster. |
+| `MANAGER` | `manager@gov.local` s.d. `manager15@gov.local` | `password123` | Pengelola unit usaha: manajemen etalase komoditas, registrasi anggota warga desa, dan pencatatan transaksi kasir (Tersedia 15 akun default untuk 15 unit KopDes awal). |
+| `CITIZEN` | `citizen@gov.local` (atau daftar mandiri) | `password123` | Warga desa: akses katalog komoditas koperasi, pendaftaran akun mandiri via menu Register, pengajuan keanggotaan, pemesanan produk desa, dan nota transaksi. |
 
 ---
 

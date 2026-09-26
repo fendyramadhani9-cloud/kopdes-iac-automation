@@ -65,6 +65,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $nodeInfo = get_active_node_info();
+
+// Ambil daftar 15 KopDes beserta Managernya untuk dropdown demo akun
+$demoManagers = [];
+$pdoDb = Database::getConnection();
+if ($pdoDb) {
+    try {
+        $stmtDm = $pdoDb->query("
+            SELECT k.id AS kopdes_id, k.name AS kopdes_name, k.village_name, u.name AS mgr_name, u.email AS mgr_email
+            FROM kopdes k
+            JOIN users u ON k.manager_id = u.id
+            WHERE u.role = 'MANAGER'
+            ORDER BY k.id ASC
+        ");
+        $demoManagers = $stmtDm->fetchAll();
+    } catch (Exception $e) {}
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -74,10 +90,177 @@ $nodeInfo = get_active_node_info();
     <title>Masuk &bull; KopDes Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/components.css">
     <style>
+        /* ========================================================
+           KopDes Intro Loading Animation Overlay
+           ======================================================== */
+        .kopdes-loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #ffffff;
+            background: radial-gradient(circle at center, #ffffff 0%, #fffbfb 65%, #fee2e2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s;
+        }
+
+        .kopdes-loader-overlay.fade-out {
+            opacity: 0;
+            transform: scale(1.03);
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .kopdes-loader-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .kopdes-loader-logo-wrapper {
+            position: relative;
+            width: 140px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .kopdes-loader-halo {
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(200, 30, 43, 0.2) 0%, rgba(200, 30, 43, 0) 70%);
+            animation: haloPulse 2s ease-in-out infinite;
+        }
+
+        .kopdes-loader-logo {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            animation: logoFloat 2.2s ease-in-out infinite alternate;
+            filter: drop-shadow(0 10px 20px rgba(200, 30, 43, 0.16));
+        }
+
+        .kopdes-loader-text-wrapper {
+            margin-top: 6px;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .kopdes-loader-title {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 0.18em;
+            color: #c81e2b;
+            margin: 0;
+            text-transform: uppercase;
+            animation: titleGlow 2.5s ease-in-out infinite alternate;
+        }
+
+        .kopdes-loader-sub {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #64748b;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 6px;
+            margin-bottom: 0;
+        }
+
+        .kopdes-loader-bar-wrap {
+            width: 160px;
+            height: 4px;
+            background: #f1f5f9;
+            border-radius: 99px;
+            margin-top: 24px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .kopdes-loader-bar {
+            width: 45%;
+            height: 100%;
+            background: linear-gradient(90deg, #c81e2b, #ef4444);
+            border-radius: 99px;
+            position: absolute;
+            animation: progressBarMove 1.4s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0% {
+                transform: translateY(0px) scale(0.97);
+            }
+            100% {
+                transform: translateY(-8px) scale(1.02);
+            }
+        }
+
+        @keyframes haloPulse {
+            0%, 100% {
+                transform: scale(0.9);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes titleGlow {
+            0% {
+                letter-spacing: 0.16em;
+                text-shadow: 0 0 1px rgba(200, 30, 43, 0.2);
+            }
+            100% {
+                letter-spacing: 0.22em;
+                text-shadow: 0 4px 12px rgba(200, 30, 43, 0.25);
+            }
+        }
+
+        @keyframes fadeInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes progressBarMove {
+            0% {
+                left: -45%;
+            }
+            50% {
+                left: 40%;
+                width: 60%;
+            }
+            100% {
+                left: 105%;
+                width: 35%;
+            }
+        }
+
         .login-layout {
             display: flex;
             min-height: 100vh;
@@ -239,6 +422,24 @@ $nodeInfo = get_active_node_info();
     </style>
 </head>
 <body>
+
+<!-- KopDes Intro Loading Animation Overlay -->
+<div id="kopdes-intro-loader" class="kopdes-loader-overlay">
+    <div class="kopdes-loader-content">
+        <div class="kopdes-loader-logo-wrapper">
+            <div class="kopdes-loader-halo"></div>
+            <img src="assets/images/logo-kopdes.svg" alt="Logo KopDes" class="kopdes-loader-logo">
+        </div>
+        <div class="kopdes-loader-text-wrapper">
+            <h1 class="kopdes-loader-title">KOPERASI MERAH PUTIH</h1>
+            <p class="kopdes-loader-sub">Sistem Informasi &amp; Tata Kelola Koperasi Desa</p>
+        </div>
+        <div class="kopdes-loader-bar-wrap">
+            <div class="kopdes-loader-bar"></div>
+        </div>
+    </div>
+</div>
+
 <div class="login-layout">
     <!-- Left Column: Branding -->
     <div class="login-brand-col">
@@ -320,24 +521,37 @@ $nodeInfo = get_active_node_info();
             <div class="demo-accounts-card">
                 <div class="demo-title">
                     <span>Akun Demo Cepat</span>
-                    <span style="font-size:0.7rem;text-transform:none;color:var(--slate-400);">Klik untuk isi email</span>
+                    <span style="font-size:0.7rem;text-transform:none;color:var(--slate-400);">1-Klik Isi Kredensial</span>
                 </div>
                 <div class="demo-chips">
                     <div class="demo-chip" onclick="fillDemo('head@gov.local')">
                         <span class="demo-chip-role">HEAD_GOV (Kepala Wilayah)</span>
                         <span class="demo-chip-email">head@gov.local</span>
                     </div>
-                    <div class="demo-chip" onclick="fillDemo('manager@gov.local')">
-                        <span class="demo-chip-role">MANAGER (Pengelola KopDes)</span>
-                        <span class="demo-chip-email">manager@gov.local</span>
-                    </div>
                     <div class="demo-chip" onclick="fillDemo('citizen@gov.local')">
                         <span class="demo-chip-role">CITIZEN (Warga Desa)</span>
                         <span class="demo-chip-email">citizen@gov.local</span>
                     </div>
                 </div>
+
+                <!-- 15 Managers Dropdown Selector -->
+                <div style="margin-top:10px;background:#ffffff;border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:8px 10px;">
+                    <label for="demoMgrSelect" style="font-size:0.75rem;font-weight:700;color:var(--slate-700);display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                        <span>Pilih Manager (15 KopDes):</span>
+                        <span style="font-size:0.7rem;color:var(--primary-600);font-weight:600;">15 Unit</span>
+                    </label>
+                    <select id="demoMgrSelect" class="form-control" style="font-size:0.75rem;padding:6px 8px;height:auto;" onchange="if(this.value) fillDemo(this.value)">
+                        <option value="">-- Pilih Akun Manager KopDes (1 - 15) --</option>
+                        <?php foreach ($demoManagers as $dm): ?>
+                            <option value="<?= e($dm['mgr_email']) ?>">
+                                [Unit <?= $dm['kopdes_id'] ?>] <?= e($dm['kopdes_name']) ?> &bull; <?= e($dm['mgr_name']) ?> (<?= e($dm['mgr_email']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <div style="font-size:0.75rem;color:var(--slate-500);margin-top:8px;text-align:center;">
-                    Password semua akun demo dijelaskan di README.
+                    Password default semua akun: <code>password123</code>
                 </div>
             </div>
         </div>
@@ -345,11 +559,23 @@ $nodeInfo = get_active_node_info();
 </div>
 
 <script>
-function fillDemo(email) {
+window.addEventListener('load', function() {
+    const loader = document.getElementById('kopdes-intro-loader');
+    if (loader) {
+        setTimeout(function() {
+            loader.classList.add('fade-out');
+            setTimeout(function() {
+                loader.remove();
+            }, 550);
+        }, 1100);
+    }
+});
+
+function fillDemo(email, pwd = 'password123') {
     document.getElementById('loginEmail').value = email;
-    const pwd = document.getElementById('loginPassword');
-    pwd.focus();
-    pwd.placeholder = 'Ketik password akun demo...';
+    const pwdEl = document.getElementById('loginPassword');
+    pwdEl.value = pwd;
+    pwdEl.focus();
 }
 </script>
 </body>

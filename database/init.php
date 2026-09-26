@@ -202,36 +202,47 @@ if ($connection === 'sqlite') {
     }
 }
 
-// Cek apakah data user sudah ada
-$stmt = $pdo->query("SELECT COUNT(*) AS total FROM users");
-$row = $stmt->fetch();
-$usersCount = (int)($row['total'] ?? 0);
+// Pastikan semua pengguna demo default selalu terdaftar
+$defaultUsers = [
+    [1, 'H. Raden Suryanegara', 'head@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'HEAD_GOV', '081122334455', 'Kantor Pusat Pemerintahan Wilayah, Jl. Praja No. 1', '2025-01-01 08:00:00'],
+    [2, 'Fendy Ardiansyah', 'manager@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567890', 'Dusun Sukamaju RT 02/RW 03, Pajerukan', '2025-01-05 09:30:00'],
+    [3, 'Dewi Kartikasari', 'manager2@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081398765432', 'Jl. Mekarwangi Asri Blok C-12, Wlahar Wetan', '2025-01-10 10:15:00'],
+    [4, 'Bambang Pamungkas', 'manager3@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081567890123', 'Komplek Agrowisata No. 44, Ketenger', '2025-01-15 11:00:00'],
+    [5, 'Siti Aminah', 'citizen@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085712349876', 'Desa Sukamaju RT 01/RW 01', '2025-01-18 13:20:00'],
+    [6, 'Budi Santoso', 'budi@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085876543210', 'Dusun Sukamaju RT 04/RW 02', '2025-01-20 14:00:00'],
+    [7, 'Ahmad Fauzi', 'fauzi@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085934561234', 'Kelurahan Mekarwangi No. 89', '2025-01-22 15:45:00'],
+    [8, 'Ratna Wulandari', 'ratna@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085611223344', 'Desa Cibadak RT 03/RW 05', '2025-01-25 16:10:00'],
+    [9, 'Siti Rohmah', 'manager4@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567804', 'Desa Kalisari RT 01/RW 02, Cilongok', '2025-01-20 14:20:00'],
+    [10, 'Agus Setiawan', 'manager5@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567805', 'Desa Sudagaran RT 03/RW 01, Banyumas', '2025-01-21 11:00:00'],
+    [11, 'Haryanto', 'manager6@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567806', 'Desa Cikakak RT 02/RW 04, Wangon', '2025-01-22 09:30:00'],
+    [12, 'Tri Wahyuni', 'manager7@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567807', 'Desa Tinggarjaya RT 04/RW 02, Jatilawang', '2025-01-23 10:15:00'],
+    [13, 'Eko Prasetyo', 'manager8@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567808', 'Desa Alasmalang RT 01/RW 03, Kemranjen', '2025-01-24 13:40:00'],
+    [14, 'Nur Hidayah', 'manager9@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567809', 'Desa Watuagung RT 05/RW 01, Tambak', '2025-01-25 15:20:00'],
+    [15, 'Sugeng Riyadi', 'manager10@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567810', 'Desa Banjarpanepen RT 02/RW 05, Sumpiuh', '2025-01-26 08:45:00'],
+    [16, 'Endang Lestari', 'manager11@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567811', 'Desa Pancasan RT 03/RW 02, Ajibarang', '2025-01-27 10:00:00'],
+    [17, 'Aris Munandar', 'manager12@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567812', 'Desa Rawalo RT 01/RW 04, Rawalo', '2025-01-28 11:30:00'],
+    [18, 'Rina Kusuma', 'manager13@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567813', 'Desa Gandatapa RT 02/RW 02, Sumbang', '2025-01-29 14:10:00'],
+    [19, 'Gunawan Wibowo', 'manager14@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567814', 'Desa Karangrau RT 04/RW 03, Sokaraja', '2025-01-30 16:00:00'],
+    [20, 'Dian Puspitasari', 'manager15@gov.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081234567815', 'Kelurahan Karangklesem RT 01/RW 05, Purwokerto Selatan', '2025-01-31 09:00:00']
+];
 
-if ($usersCount > 0) {
-    output("Data pengguna demo sudah ada ({$usersCount} users terdaftar).", 'info');
+if ($connection === 'sqlite') {
+    output("Menyinkronkan akun demo default ke SQLite...", 'info');
+    $uStmt = $pdo->prepare("INSERT OR IGNORE INTO users (id, name, email, password, role, phone, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    foreach ($defaultUsers as $u) {
+        $uStmt->execute($u);
+    }
+    output("15 Akun Manager dan Demo Users di SQLite telah disinkronkan!", 'success');
 } else {
-    output("Mengimpor data demo awal dari database/seed.sql...", 'info');
-    $seedFile = __DIR__ . '/seed.sql';
-    if (file_exists($seedFile)) {
-        if ($connection === 'sqlite') {
-            // Jalankan seed parsial untuk users, memberships, products di SQLite jika diperlukan
-            output("Menyiapkan akun default demo di SQLite...", 'info');
-            $defaultUsers = [
-                [1, 'Bambang Pamungkas', 'headgov@kopdes.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'HEAD_GOV', '081234567890', 'Gedung Pusat Pemerintahan Antabrantah Lt. 4', '2025-01-01 08:00:00'],
-                [2, 'Siti Nurhaliza', 'manager1@kopdes.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081298765432', 'Jl. Sukamaju RT 01/RW 02 No. 15', '2025-01-05 09:30:00'],
-                [3, 'Joko Widodo', 'manager2@kopdes.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081311223344', 'Komplek Mekar Permai Blok C4', '2025-01-07 10:15:00'],
-                [4, 'Sri Mulyani', 'manager3@kopdes.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'MANAGER', '081355667788', 'Jl. Agribisnis Terpadu No. 8', '2025-01-08 14:00:00'],
-                [5, 'Budi Santoso', 'budi@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085712345678', 'Dusun Sukamaju Kidul RT 02/RW 01', '2025-01-15 11:00:00'],
-                [6, 'Dewi Lestari', 'dewi@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085887654321', 'Dusun Mekar Asri RT 04/RW 03', '2025-01-20 13:20:00'],
-                [7, 'Ahmad Fauzi', 'fauzi@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085934561234', 'Kelurahan Mekarwangi No. 89', '2025-01-22 15:45:00'],
-                [8, 'Ratna Wulandari', 'ratna@citizen.local', '$2y$10$M6R8KUrvYC96P9U2jjoMOuKMAFrF/iwMbZFeO7XMGl6IIVumxFlQK', 'CITIZEN', '085611223344', 'Desa Cibadak RT 03/RW 05', '2025-01-25 16:10:00']
-            ];
-            $uStmt = $pdo->prepare("INSERT OR IGNORE INTO users (id, name, email, password, role, phone, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            foreach ($defaultUsers as $u) {
-                $uStmt->execute($u);
-            }
-            output("Akun demo default berhasil dibuat!", 'success');
-        } else {
+    // Cek apakah data user sudah ada di MariaDB
+    $stmt = $pdo->query("SELECT COUNT(*) AS total FROM users");
+    $row = $stmt->fetch();
+    $usersCount = (int)($row['total'] ?? 0);
+
+    if ($usersCount === 0) {
+        output("Mengimpor data demo awal dari database/seed.sql...", 'info');
+        $seedFile = __DIR__ . '/seed.sql';
+        if (file_exists($seedFile)) {
             $seedSql = file_get_contents($seedFile);
             try {
                 $pdo->exec($seedSql);
@@ -240,6 +251,8 @@ if ($usersCount > 0) {
                 output("Peringatan saat impor seed.sql: " . $e->getMessage(), 'warning');
             }
         }
+    } else {
+        output("Data pengguna demo di MariaDB sudah ada ({$usersCount} users terdaftar).", 'info');
     }
 }
 
@@ -305,7 +318,7 @@ $kopdesDataset = [
         'latitude' => -7.39120000,
         'longitude' => 109.13450000,
         'description' => 'Sentra pengrajin tahu legendaris dan produksi gula kelapa organik bersertifikasi.',
-        'manager_id' => null,
+        'manager_id' => 9,
         'status' => 'active',
         'created_at' => '2025-01-20 14:20:00'
     ],
@@ -320,7 +333,7 @@ $kopdesDataset = [
         'latitude' => -7.51860000,
         'longitude' => 109.29410000,
         'description' => 'Koperasi pelestarian kerajinan batik Banyumasan dan kuliner tradisional khas pesisir Serayu.',
-        'manager_id' => null,
+        'manager_id' => 10,
         'status' => 'active',
         'created_at' => '2025-01-21 11:00:00'
     ],
@@ -335,7 +348,7 @@ $kopdesDataset = [
         'latitude' => -7.50240000,
         'longitude' => 109.06120000,
         'description' => 'Pemberdayaan ekonomi berbasis kearifan lokal, hasil kebun kopi, dan komoditas pisang.',
-        'manager_id' => null,
+        'manager_id' => 11,
         'status' => 'active',
         'created_at' => '2025-01-22 09:30:00'
     ],
@@ -350,7 +363,7 @@ $kopdesDataset = [
         'latitude' => -7.53850000,
         'longitude' => 109.11240000,
         'description' => 'Distribusi gabah kering panen, penggilingan padi mandiri, dan pupuk organik desa.',
-        'manager_id' => null,
+        'manager_id' => 12,
         'status' => 'active',
         'created_at' => '2025-01-23 10:15:00'
     ],
@@ -365,7 +378,7 @@ $kopdesDataset = [
         'latitude' => -7.60410000,
         'longitude' => 109.30250000,
         'description' => 'Sentra pembibitan dan pemasaran durian Bawor unggul nasional serta produk hortikultura.',
-        'manager_id' => null,
+        'manager_id' => 13,
         'status' => 'active',
         'created_at' => '2025-01-24 13:40:00'
     ],
@@ -380,7 +393,7 @@ $kopdesDataset = [
         'latitude' => -7.60820000,
         'longitude' => 109.41870000,
         'description' => 'Pemasaran komoditas bebek petelur, pakan unggas, dan hasil perkebunan karet rakyat.',
-        'manager_id' => null,
+        'manager_id' => 14,
         'status' => 'active',
         'created_at' => '2025-01-25 15:20:00'
     ],
@@ -395,7 +408,7 @@ $kopdesDataset = [
         'latitude' => -7.57680000,
         'longitude' => 109.36210000,
         'description' => 'Pengolahan gula semut kristal ekspor, rempah kapulaga, dan madu hutan klanceng.',
-        'manager_id' => null,
+        'manager_id' => 15,
         'status' => 'active',
         'created_at' => '2025-01-26 08:45:00'
     ],
@@ -410,7 +423,7 @@ $kopdesDataset = [
         'latitude' => -7.42150000,
         'longitude' => 109.07840000,
         'description' => 'Sentra industri genteng pres tanah liat, perkakas pertukangan, dan bahan bangunan rakyat.',
-        'manager_id' => null,
+        'manager_id' => 16,
         'status' => 'active',
         'created_at' => '2025-01-27 10:00:00'
     ],
@@ -425,7 +438,7 @@ $kopdesDataset = [
         'latitude' => -7.52640000,
         'longitude' => 109.18650000,
         'description' => 'Koperasi budidaya ikan air tawar keramba apung Serayu dan sayuran hidroponik.',
-        'manager_id' => null,
+        'manager_id' => 17,
         'status' => 'active',
         'created_at' => '2025-01-28 11:30:00'
     ],
@@ -440,7 +453,7 @@ $kopdesDataset = [
         'latitude' => -7.36250000,
         'longitude' => 109.27860000,
         'description' => 'Pemberdayaan petani sayur mayur lereng gunung, kolam gurame, dan pengolahan kompos.',
-        'manager_id' => null,
+        'manager_id' => 18,
         'status' => 'active',
         'created_at' => '2025-01-29 14:10:00'
     ],
@@ -455,7 +468,7 @@ $kopdesDataset = [
         'latitude' => -7.45210000,
         'longitude' => 109.26180000,
         'description' => 'Sentra jajanan khas getuk goreng nira kelapa, keripik tempe, dan batik canting.',
-        'manager_id' => null,
+        'manager_id' => 19,
         'status' => 'active',
         'created_at' => '2025-01-30 16:00:00'
     ],
@@ -470,7 +483,7 @@ $kopdesDataset = [
         'latitude' => -7.44120000,
         'longitude' => 109.24350000,
         'description' => 'Pengembangan koperasi ritel sembako warga perkotaan, logistik pangan, dan bank sampah.',
-        'manager_id' => null,
+        'manager_id' => 20,
         'status' => 'active',
         'created_at' => '2025-01-31 09:00:00'
     ]
@@ -513,6 +526,7 @@ foreach ($kopdesDataset as $kItem) {
                 latitude = ?,
                 longitude = ?,
                 description = COALESCE(description, ?),
+                manager_id = ?,
                 status = 'active'
             WHERE id = ?
         ");
@@ -526,6 +540,7 @@ foreach ($kopdesDataset as $kItem) {
             $kItem['latitude'],
             $kItem['longitude'],
             $kItem['description'],
+            $kItem['manager_id'],
             $targetId
         ]);
     } else {
