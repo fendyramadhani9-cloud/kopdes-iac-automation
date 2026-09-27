@@ -12,6 +12,14 @@ terraform/*.tfplan
 ansible/*.retry
 ansible/.ansible/
 
+# SQLite Databases & Local Test Artifacts
+database/*.sqlite
+database/*.sqlite3
+database/*.db
+database/*.sqlite-journal
+tests/*.txt
+tests/*_cookie*.txt
+
 # Operating System & IDE
 .DS_Store
 Thumbs.db

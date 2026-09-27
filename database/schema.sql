@@ -49,7 +49,7 @@ CREATE TABLE `kopdes` (
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  INDEX `idx_kopdes_manager` (`manager_id`),
+  UNIQUE KEY `idx_unique_kopdes_manager` (`manager_id`),
   INDEX `idx_kopdes_status` (`status`),
   INDEX `idx_kopdes_coords` (`latitude`, `longitude`),
   CONSTRAINT `fk_kopdes_manager`

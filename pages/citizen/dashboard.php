@@ -48,7 +48,7 @@ require __DIR__ . '/../../includes/layout/header.php';
     <div class="card-body" style="padding:28px;">
         <span style="font-size:0.75rem;font-weight:700;letter-spacing:0.06em;color:#fecaca;text-transform:uppercase;">PORTAL WARGA DESA</span>
         <h2 style="font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;color:#ffffff;margin-top:4px;">
-            Halo, <?= e($user['name']) ?> 👋
+            Halo, <?= e($user['name']) ?>
         </h2>
         <p style="color:#fee2e2;font-size:0.9375rem;margin-top:6px;max-width:640px;line-height:1.5;">
             Selamat datang di platform digital KopDes Merah Putih. Temukan koperasi desa di sekitar wilayah Anda, beli pupuk subsidi, bibit unggul, dan kebutuhan pangan langsung dari sentra desa.
@@ -75,7 +75,7 @@ require __DIR__ . '/../../includes/layout/header.php';
 </div>
 
 <!-- Grid Cards KopDes -->
-<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px;margin-bottom:28px;">
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr));gap:20px;margin-bottom:28px;">
     <?php if (empty($availableKopdes)): ?>
         <div class="card" style="grid-column: 1 / -1;">
             <div class="card-body">

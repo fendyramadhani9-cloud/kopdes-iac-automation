@@ -13,7 +13,14 @@ directory="{{ app_dest_dir }}"
 output_log="/var/log/kopdes/access.log"
 error_log="/var/log/kopdes/error.log"
 
+export PHP_CLI_SERVER_WORKERS=4
+
 depend() {
     need net
     after firewall
+}
+
+start_pre() {
+    checkpath -d -m 0755 /var/log/kopdes
+    export PHP_CLI_SERVER_WORKERS=4
 }

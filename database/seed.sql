@@ -30,7 +30,7 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `phone`, `addres
 -- 2. KOPDES (15 Unit Awal: Lengkap dengan Manager Penanggung Jawab)
 INSERT INTO `kopdes` (`id`, `name`, `location`, `village_name`, `district_name`, `regency_name`, `province_name`, `latitude`, `longitude`, `description`, `manager_id`, `status`, `created_at`) VALUES
 (1, 'KopDes Berkah Tani Pajerukan', 'Desa Pajerukan, Kec. Kalibagor', 'Pajerukan', 'Kalibagor', 'Banyumas', 'Jawa Tengah', -7.48120000, 109.28850000, 'Koperasi sentra hasil tani padi, palawija, dan distribusi pupuk desa Pajerukan.', 2, 'active', '2025-01-10 10:00:00'),
-(2, 'Kopdes Klahar Wetan Mandiri', 'Desa Wlahar Wetan, Kec. Kalibagor', 'Wlahar Wetan', 'Kalibagor', 'Banyumas', 'Jawa Tengah', -7.49350000, 109.31420000, 'Pemberdayaan usaha mikro warga, pertanian terpadu, dan sembako berkualitas terjangkau.', 3, 'active', '2025-01-12 11:30:00'),
+(2, 'KopDes Wlahar Wetan Mandiri', 'Desa Wlahar Wetan, Kec. Kalibagor', 'Wlahar Wetan', 'Kalibagor', 'Banyumas', 'Jawa Tengah', -7.49350000, 109.31420000, 'Pemberdayaan usaha mikro warga, pertanian terpadu, dan sembako berkualitas terjangkau.', 3, 'active', '2025-01-12 11:30:00'),
 (3, 'KopDes Lereng Slamet Sejahtera', 'Desa Ketenger, Kec. Baturraden', 'Ketenger', 'Baturraden', 'Banyumas', 'Jawa Tengah', -7.31560000, 109.21980000, 'Sentra peternakan sapi perah, susu murni segar, dan agrowisata lereng Gunung Slamet.', 4, 'active', '2025-01-18 09:15:00'),
 (4, 'KopDes Sari Rasa Cilongok', 'Desa Kalisari, Kec. Cilongok', 'Kalisari', 'Cilongok', 'Banyumas', 'Jawa Tengah', -7.39120000, 109.13450000, 'Sentra pengrajin tahu legendaris dan produksi gula kelapa organik bersertifikasi.', 9, 'active', '2025-01-20 14:20:00'),
 (5, 'KopDes Pusaka Kota Lama', 'Desa Sudagaran, Kec. Banyumas', 'Sudagaran', 'Banyumas', 'Banyumas', 'Jawa Tengah', -7.51860000, 109.29410000, 'Koperasi pelestarian kerajinan batik Banyumasan dan kuliner tradisional khas pesisir Serayu.', 10, 'active', '2025-01-21 11:00:00'),
@@ -75,8 +75,8 @@ INSERT INTO `products` (`id`, `kopdes_id`, `name`, `sku`, `category`, `price`, `
 (6, 2, 'Telur Ayam Kampung Asli', 'PRD-KM-002', 'Sembako', 32000.00, 60, 'tray 10 butir', 'available', '2025-01-16 13:20:00'),
 (7, 2, 'Anyaman Keranjang Bambu Desa', 'PRD-KM-003', 'Kerajinan', 45000.00, 35, 'buah', 'available', '2025-01-17 15:00:00'),
 (8, 3, 'Pakan Konsentrat Sapi Perah', 'PRD-KS-001', 'Peternakan', 220000.00, 40, 'karung 50kg', 'available', '2025-01-20 10:00:00'),
-(9, 3, 'Susu Segar Murni Cibadak', 'PRD-KS-002', 'Peternakan', 18000.00, 75, 'liter', 'available', '2025-01-21 08:30:00'),
-(10, 4, 'Pakan Ikan Pelet Terapung', 'PRD-KN-001', 'Perikanan', 195000.00, 90, 'karung 20kg', 'available', '2025-01-26 10:00:00');
+(9, 3, 'Susu Segar Murni Baturraden', 'PRD-KS-002', 'Peternakan', 18000.00, 75, 'liter', 'available', '2025-01-21 08:30:00'),
+(10, 4, 'Gula Kelapa Organik Kristal', 'PRD-KC-001', 'Sembako', 28000.00, 90, 'kantong 1kg', 'available', '2025-01-26 10:00:00');
 
 -- 5. TRANSACTIONS
 INSERT INTO `transactions` (`id`, `invoice_code`, `kopdes_id`, `user_id`, `product_id`, `type`, `quantity`, `total_amount`, `status`, `notes`, `transaction_date`) VALUES

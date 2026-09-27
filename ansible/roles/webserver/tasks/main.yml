@@ -31,7 +31,7 @@
 
 - name: Deploy direktori source code KopDes dari repository
   ansible.builtin.copy:
-    src: "../{{ item }}"
+    src: "{{ playbook_dir }}/../{{ item }}"
     dest: "{{ app_dest_dir }}/"
     mode: '0755'
   loop:
@@ -41,11 +41,31 @@
     - pages
     - public
 
-- name: Inject file konfigurasi .env sesuai identitas node ({{ server_node_name }})
+- name: Inject file konfigurasi .env sesuai identitas node ({{ server_node_name | default(inventory_hostname) }})
   ansible.builtin.template:
     src: env.j2
     dest: "{{ app_dest_dir }}/.env"
     mode: '0644'
+  notify: Restart KopDesWeb
+
+- name: Deteksi direktori konfigurasi PHP aktif di Alpine Linux
+  ansible.builtin.shell: |
+    for d in /etc/php8* /etc/php8; do
+      if [ -d "$d" ]; then
+        echo "$d"
+      fi
+    done
+  register: php_dirs
+  changed_when: false
+  failed_when: false
+
+- name: Konfigurasi php.ini runtime PHP pada node web Alpine Linux
+  ansible.builtin.template:
+    src: php.ini.j2
+    dest: "{{ item }}/php.ini"
+    mode: '0644'
+  loop: "{{ ((php_dirs.stdout_lines | default([])) + ['/etc/php8']) | unique }}"
+  failed_when: false
   notify: Restart KopDesWeb
 
 - name: Pasang skrip layanan OpenRC untuk web server KopDes

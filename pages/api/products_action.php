@@ -58,6 +58,15 @@ if ($action === 'add') {
         redirect('index.php?page=products');
     }
 
+    // AUDIT-003: Pastikan KopDes ada dan berstatus active
+    $checkKopdes = $pdo->prepare("SELECT id, status FROM kopdes WHERE id = ?");
+    $checkKopdes->execute([$kopdesId]);
+    $targetKopdes = $checkKopdes->fetch();
+    if (!$targetKopdes || $targetKopdes['status'] !== 'active') {
+        flash('error', 'Koperasi Desa target tidak ditemukan atau sedang nonaktif.');
+        redirect('index.php?page=products');
+    }
+
     if (empty($sku)) {
         $sku = 'PRD-' . strtoupper(substr(md5(uniqid()), 0, 6));
     }

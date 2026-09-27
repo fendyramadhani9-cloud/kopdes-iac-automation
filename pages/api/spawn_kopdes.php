@@ -46,12 +46,29 @@ if (empty($name) || empty($location)) {
     json_response(['success' => false, 'message' => 'Nama KopDes dan Lokasi wajib diisi.'], 422);
 }
 
+// AUDIT-013: Validasi panjang string dan batasan koordinat
+if (mb_strlen($name) > 150) {
+    json_response(['success' => false, 'message' => 'Nama KopDes maksimal 150 karakter.'], 422);
+}
+if (mb_strlen($location) > 255) {
+    json_response(['success' => false, 'message' => 'Alamat lokasi maksimal 255 karakter.'], 422);
+}
+if ($latitude !== null && ($latitude < -90.0 || $latitude > 90.0)) {
+    json_response(['success' => false, 'message' => 'Koordinat Latitude harus berada di antara -90.0 dan 90.0.'], 422);
+}
+if ($longitude !== null && ($longitude < -180.0 || $longitude > 180.0)) {
+    json_response(['success' => false, 'message' => 'Koordinat Longitude harus berada di antara -180.0 dan 180.0.'], 422);
+}
+
 // Pastikan jika manager dipilih, manager tersebut memang ada
 if ($managerId !== null) {
     $stmtCheck = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'MANAGER'");
     $stmtCheck->execute([$managerId]);
     if (!$stmtCheck->fetch()) {
         $managerId = null;
+    } else {
+        // AUDIT-011: Lepaskan manager dari unit sebelumnya jika ada agar 1-to-1 konsisten
+        $pdo->prepare("UPDATE kopdes SET manager_id = NULL WHERE manager_id = ?")->execute([$managerId]);
     }
 }
 

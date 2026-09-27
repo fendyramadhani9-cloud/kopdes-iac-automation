@@ -27,7 +27,16 @@ if ($flashError && empty($error)) {
     $error = $flashError;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// AUDIT-018: Brute-force throttling (Maksimal 5 percobaan gagal, penundaan 5 menit)
+$maxAttempts = 5;
+$lockoutDuration = 300; // 5 menit
+$now = time();
+$lockoutUntil = $_SESSION['login_lockout_until'] ?? 0;
+
+if ($lockoutUntil > $now) {
+    $remainingMinutes = max(1, (int)ceil(($lockoutUntil - $now) / 60));
+    $error = "Terlalu banyak percobaan masuk yang gagal. Silakan coba lagi dalam {$remainingMinutes} menit.";
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf()) {
         $error = 'Sesi telah kedaluwarsa. Silakan coba kembali.';
     } else {
@@ -47,6 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $user = $stmt->fetch();
 
                 if ($user && password_verify($password, $user['password'])) {
+                    // Reset attempt counter jika sukses login
+                    unset($_SESSION['login_attempts'], $_SESSION['login_lockout_until']);
+
                     login_user($user);
                     flash('success', "Selamat datang kembali, {$user['name']}!");
 
@@ -57,7 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     };
                     redirect($target);
                 } else {
-                    $error = 'Kombinasi email atau password tidak sesuai.';
+                    $attempts = (int)($_SESSION['login_attempts'] ?? 0) + 1;
+                    $_SESSION['login_attempts'] = $attempts;
+
+                    if ($attempts >= $maxAttempts) {
+                        $_SESSION['login_lockout_until'] = $now + $lockoutDuration;
+                        $error = "Terlalu banyak percobaan gagal ({$attempts}/{$maxAttempts}). Login diblokir sementara selama 5 menit demi keamanan.";
+                    } else {
+                        $remaining = $maxAttempts - $attempts;
+                        $error = "Kombinasi email atau password tidak sesuai. Sisa kesempatan: {$remaining} kali.";
+                    }
                 }
             }
         }
@@ -93,6 +114,11 @@ if ($pdoDb) {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/components.css">
+    <noscript>
+        <style>
+            #kopdes-intro-loader { display: none !important; }
+        </style>
+    </noscript>
     <style>
         /* ========================================================
            KopDes Intro Loading Animation Overlay

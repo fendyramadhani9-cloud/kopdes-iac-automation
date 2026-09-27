@@ -16,6 +16,7 @@ $pdo = Database::getConnection();
 
 // Tentukan KopDes mana yang dikelola
 $kopdes = null;
+$allKopdes = [];
 if ($user['role'] === 'MANAGER') {
     $kopdes = get_manager_kopdes($user['id']);
     if (!$kopdes) {
@@ -26,6 +27,12 @@ if ($user['role'] === 'MANAGER') {
 } else {
     // HEAD_GOV dapat melihat semua atau memfilter berdasarkan kopdes_id
     $kopdesId = !empty($_GET['kopdes_id']) ? (int)$_GET['kopdes_id'] : null;
+    $allKopdes = $pdo->query("SELECT id, name, code FROM kopdes WHERE status = 'active' ORDER BY name ASC")->fetchAll();
+    if ($kopdesId) {
+        $stmtTargetKopdes = $pdo->prepare("SELECT id, name, code, status FROM kopdes WHERE id = ?");
+        $stmtTargetKopdes->execute([$kopdesId]);
+        $kopdes = $stmtTargetKopdes->fetch() ?: null;
+    }
 }
 
 // Query produk
@@ -113,14 +120,14 @@ require __DIR__ . '/../../includes/layout/header.php';
                             </td>
                             <td style="text-align:right;">
                                 <div style="display:inline-flex;gap:6px;">
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick='openEditProductModal(<?= json_encode($p) ?>)'>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick='openEditProductModal(<?= htmlspecialchars(json_encode($p, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8') ?>)'>
                                         Edit
                                     </button>
                                     <form method="POST" action="index.php?page=api-products-action" id="delForm_<?= $p['id'] ?>" style="display:inline;">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                                        <button type="button" class="btn btn-secondary btn-sm" style="color:var(--color-danger);" onclick="confirmDelete(<?= $p['id'] ?>, '<?= e($p['name']) ?>')">
+                                        <button type="button" class="btn btn-secondary btn-sm" style="color:var(--color-danger);" onclick='confirmDelete(<?= (int)$p['id'] ?>, <?= json_encode((string)$p['name'], JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
                                             Hapus
                                         </button>
                                     </form>
@@ -145,11 +152,25 @@ require __DIR__ . '/../../includes/layout/header.php';
             <form method="POST" action="index.php?page=api-products-action">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="add">
-                <?php if ($kopdes): ?>
-                    <input type="hidden" name="kopdes_id" value="<?= $kopdes['id'] ?>">
+                <?php if ($user['role'] === 'MANAGER' && $kopdes): ?>
+                    <input type="hidden" name="kopdes_id" value="<?= (int)$kopdes['id'] ?>">
                 <?php endif; ?>
 
                 <div class="modal-body">
+                    <?php if ($user['role'] === 'HEAD_GOV'): ?>
+                        <div class="form-group">
+                            <label class="form-label" for="addKopdesId">Koperasi Desa Target <span class="text-danger">*</span></label>
+                            <select id="addKopdesId" name="kopdes_id" class="form-control" required>
+                                <option value="">-- Pilih Unit KopDes --</option>
+                                <?php foreach ($allKopdes as $k): ?>
+                                    <option value="<?= (int)$k['id'] ?>" <?= (isset($kopdesId) && $kopdesId == $k['id']) ? 'selected' : '' ?>>
+                                        <?= e($k['name']) ?> (<?= e($k['code'] ?? '') ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="form-group">
                         <label class="form-label" for="prodName">Nama Produk <span class="text-danger">*</span></label>
                         <input type="text" id="prodName" name="name" class="form-control" placeholder="Contoh: Pupuk NPK Phonska Plus" required>

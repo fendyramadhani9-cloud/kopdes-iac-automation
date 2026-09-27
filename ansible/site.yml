@@ -61,7 +61,7 @@
       register: haproxy_response
       retries: 5
       delay: 3
-      until: haproxy_response.status == 200
+      until: haproxy_response.status is defined and haproxy_response.status == 200
       ignore_errors: true
 
     - name: Tampilkan Ringkasan Hasil Deployment
@@ -75,5 +75,5 @@
           - "Web01 Node   : http://{{ web01_ip }} (Serving: WEB-01)"
           - "Web02 Node   : http://{{ web02_ip }} (Serving: WEB-02)"
           - "Database Node: {{ database_ip }}:3306 (MariaDB: {{ db_name }})"
-          - "Status Respon: {{ 'OK (HTTP 200)' if haproxy_response.status == 200 else 'Menunggu service ready' }}"
+          - "Status Respon: {{ 'OK (HTTP 200)' if (haproxy_response.status is defined and haproxy_response.status == 200) else 'Menunggu service ready' }}"
           - "=================================================================="

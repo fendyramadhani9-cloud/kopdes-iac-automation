@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 
-require_auth();
+require_role('HEAD_GOV');
 
 $pageTitle = 'Status Infrastruktur & Kluster';
 $nodeInfo = get_active_node_info();
@@ -20,12 +20,22 @@ $dbError = Database::getLastError();
 
 // Deteksi info database server
 $dbVersion = 'Unknown';
+$dbDriver = Database::getDriver();
+$dbHostDisplay = env('DB_HOST', '127.0.0.1');
+
 if ($dbConnected) {
     try {
         $pdo = Database::getConnection();
-        $dbVersion = $pdo->query("SELECT VERSION()")->fetchColumn() ?: 'MariaDB';
+        if ($dbDriver === 'sqlite') {
+            $ver = $pdo->query("SELECT sqlite_version()")->fetchColumn();
+            $dbVersion = 'SQLite ' . ($ver ?: '3.x');
+            $dbHostDisplay = 'Local SQLite (' . basename(env('DB_DATABASE', 'kopdes.sqlite')) . ')';
+        } else {
+            $dbVersion = $pdo->query("SELECT VERSION()")->fetchColumn() ?: 'MariaDB';
+            $dbHostDisplay = 'DB-01 (' . env('DB_HOST', '127.0.0.1') . ')';
+        }
     } catch (Exception $e) {
-        $dbVersion = 'MariaDB';
+        $dbVersion = ($dbDriver === 'sqlite') ? 'SQLite' : 'MariaDB';
     }
 }
 
@@ -111,7 +121,7 @@ require __DIR__ . '/../../includes/layout/header.php';
                     <?php if ($currentNode === 'WEB-01'): ?>
                         <span class="badge badge-active" style="margin-left:6px;font-size:0.65rem;">MELAYANI ANDA</span>
                     <?php endif; ?>
-                    <span style="display:block;font-size:0.75rem;color:var(--slate-500);">Nginx + PHP-FPM 8.x (Alpine)</span>
+                    <span style="display:block;font-size:0.75rem;color:var(--slate-500);">PHP Web Server & OpenRC (Alpine Linux)</span>
                 </div>
                 <span class="badge badge-active">ONLINE</span>
             </div>
@@ -123,7 +133,7 @@ require __DIR__ . '/../../includes/layout/header.php';
                     <?php if ($currentNode === 'WEB-02'): ?>
                         <span class="badge badge-active" style="margin-left:6px;font-size:0.65rem;">MELAYANI ANDA</span>
                     <?php endif; ?>
-                    <span style="display:block;font-size:0.75rem;color:var(--slate-500);">Nginx + PHP-FPM 8.x (Alpine)</span>
+                    <span style="display:block;font-size:0.75rem;color:var(--slate-500);">PHP Web Server & OpenRC (Alpine Linux)</span>
                 </div>
                 <span class="badge badge-active">ONLINE</span>
             </div>
@@ -146,7 +156,7 @@ require __DIR__ . '/../../includes/layout/header.php';
         <div class="card-body">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color-subtle);">
                 <span style="font-size:0.875rem;color:var(--slate-600);">Database Host / Node</span>
-                <strong style="color:var(--slate-900);">DB-01 (<?= e(env('DB_HOST', '127.0.0.1')) ?>)</strong>
+                <strong style="color:var(--slate-900);"><?= e($dbHostDisplay) ?></strong>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color-subtle);">
                 <span style="font-size:0.875rem;color:var(--slate-600);">RDBMS Engine</span>

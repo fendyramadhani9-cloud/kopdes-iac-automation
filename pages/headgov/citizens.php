@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/env.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 
@@ -12,17 +13,27 @@ require_role('HEAD_GOV');
 $pageTitle = 'Daftar Warga (Citizens)';
 $pdo = Database::getConnection();
 
+$connection = env('DB_CONNECTION', 'mysql');
+
+// Gunakan GROUP_CONCAT yang kompatibel dengan MariaDB DAN SQLite
+// Subquery untuk mencegah Cartesian product yang menginflasi hitungan
+if ($connection === 'sqlite') {
+    $groupConcatExpr = "GROUP_CONCAT(k.name, ', ')";
+} else {
+    $groupConcatExpr = "GROUP_CONCAT(k.name SEPARATOR ', ')";
+}
+
 $sql = "
     SELECT u.*,
-           GROUP_CONCAT(k.name SEPARATOR ', ') AS joined_kopdes,
-           COUNT(m.id) AS total_memberships,
-           COUNT(t.id) AS total_transactions
+           (SELECT {$groupConcatExpr}
+            FROM memberships m2
+            LEFT JOIN kopdes k ON k.id = m2.kopdes_id
+            WHERE m2.user_id = u.id AND m2.status = 'active'
+           ) AS joined_kopdes,
+           (SELECT COUNT(*) FROM memberships m3 WHERE m3.user_id = u.id AND m3.status = 'active') AS total_memberships,
+           (SELECT COUNT(*) FROM transactions t WHERE t.user_id = u.id) AS total_transactions
     FROM users u
-    LEFT JOIN memberships m ON m.user_id = u.id AND m.status = 'active'
-    LEFT JOIN kopdes k ON k.id = m.kopdes_id
-    LEFT JOIN transactions t ON t.user_id = u.id
     WHERE u.role = 'CITIZEN'
-    GROUP BY u.id
     ORDER BY u.created_at DESC
 ";
 $citizens = $pdo ? $pdo->query($sql)->fetchAll() : [];

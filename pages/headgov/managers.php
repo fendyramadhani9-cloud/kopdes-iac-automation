@@ -438,6 +438,27 @@ function openAssignModal(managerId, managerName, currentKopdesId) {
 function closeAssignModal() {
     document.getElementById('assignModalBackdrop').style.display = 'none';
 }
+
+// AUDIT-019: Auto-focus & highlight jika diarahkan via anchor #tambah-manager
+window.addEventListener('DOMContentLoaded', () => {
+    if (window.location.hash === '#tambah-manager') {
+        const card = document.getElementById('tambah-manager');
+        const input = document.getElementById('mgrName');
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
+            card.style.boxShadow = '0 0 0 3px rgba(200, 30, 43, 0.35)';
+            card.style.borderColor = 'var(--primary-600)';
+            setTimeout(() => {
+                if (input) input.focus();
+            }, 300);
+            setTimeout(() => {
+                card.style.boxShadow = '';
+                card.style.borderColor = '';
+            }, 2500);
+        }
+    }
+});
 </script>
 
 <?php require __DIR__ . '/../../includes/layout/footer.php'; ?>

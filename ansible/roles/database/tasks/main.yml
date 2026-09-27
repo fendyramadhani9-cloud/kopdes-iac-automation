@@ -50,29 +50,40 @@
     fi
   when: init_sql_result.changed or not mariadb_datadir_check.stat.exists
 
-- name: Cek apakah tabel kopdes sudah ada di database (Pemeriksaan Idempotensi)
+- name: Cek apakah skema tabel KopDes sudah ada di database
   ansible.builtin.shell: |
-    mysql -u root -p"{{ db_root_password }}" -N -e "SHOW TABLES IN {{ db_name }} LIKE 'kopdes';"
-  register: kopdes_table_check
+    mysql -u root -p"{{ db_root_password }}" -N -e "SHOW TABLES IN {{ db_name }} LIKE 'users';"
+  register: users_table_check
   changed_when: false
   failed_when: false
 
-- name: Salin file skema dan data seed KopDes ke server database
+- name: Salin file skema KopDes ke server database
   ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "/tmp/{{ item.dest }}"
+    src: "{{ playbook_dir }}/../database/schema.sql"
+    dest: "/tmp/schema.sql"
     mode: '0644'
-  loop:
-    - { src: "../database/schema.sql", dest: "schema.sql" }
-    - { src: "../database/seed.sql", dest: "seed.sql" }
-  when: kopdes_table_check.stdout | trim != 'kopdes'
+  when: users_table_check.stdout | trim != 'users'
 
 - name: Import skema awal KopDes (schema.sql) secara idempotent
   ansible.builtin.shell: |
     mysql -u root -p"{{ db_root_password }}" {{ db_name }} < /tmp/schema.sql
-  when: kopdes_table_check.stdout | trim != 'kopdes'
+  when: users_table_check.stdout | trim != 'users'
+
+- name: Cek apakah data seed sudah terisi di database (AUDIT-010)
+  ansible.builtin.shell: |
+    mysql -u root -p"{{ db_root_password }}" -N -e "SELECT COUNT(*) FROM {{ db_name }}.users;"
+  register: seed_users_count
+  changed_when: false
+  failed_when: false
+
+- name: Salin file data seed KopDes ke server database
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../database/seed.sql"
+    dest: "/tmp/seed.sql"
+    mode: '0644'
+  when: (seed_users_count.stdout | trim == '0') or (seed_users_count.rc != 0)
 
 - name: Import data seed awal KopDes (seed.sql) secara idempotent
   ansible.builtin.shell: |
     mysql -u root -p"{{ db_root_password }}" {{ db_name }} < /tmp/seed.sql
-  when: kopdes_table_check.stdout | trim != 'kopdes'
+  when: (seed_users_count.stdout | trim == '0') or (seed_users_count.rc != 0)

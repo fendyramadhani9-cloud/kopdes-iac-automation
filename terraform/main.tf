@@ -1,5 +1,8 @@
-# ==============================================================================
-# Terraform Main: Provisioning 4 Target VMs from Base VM Template
+# Catatan Arsitektur:
+# Provider elsudano/vmworkstation melakukan kloning disk .vmx pada level hypervisor.
+# Setelah proses 'terraform apply' selesai, konfigurasikan IP statis pada masing-masing VM
+# sesuai panduan TUTORIAL.md Tahap 5.1 (atau via script ansible/setup_vm_network.sh)
+# sebelum menjalankan konfigurasi Ansible.
 # ==============================================================================
 
 provider "vmworkstation" {

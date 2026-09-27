@@ -19,9 +19,9 @@ defaults
 # Frontend: Menerima Traffic Web HTTP dari Browser Klien / Siswa
 frontend kopdes_frontend
     bind *:80
-    mode http
     option forwardfor
-    http-request set-header X-Forwarded-Proto http
+    http-request set-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Proto http if !{ ssl_fc } !{ req.hdr(X-Forwarded-Proto) -m found }
     http-request set-header X-Forwarded-Host %[req.hdr(host)]
     default_backend kopdes_backend
 
@@ -29,13 +29,15 @@ frontend kopdes_frontend
 backend kopdes_backend
     mode http
     balance roundrobin
+    # Sticky Session: Cookie-based persistence agar sesi PHP tidak hilang saat rotasi
+    cookie KOPDES_SRV insert indirect nocache httponly
     # Health check aktif ke endpoint login KopDes
     option httpchk GET /index.php?page=login HTTP/1.1\r\nHost:\ localhost
     http-check expect status 200
 
     # Definisi 2 Web Server Node (inter 2000ms, gagal setelah 2x timeout)
-    server web01 {{ web01_ip }}:80 check inter 2000ms fall 2 rise 2
-    server web02 {{ web02_ip }}:80 check inter 2000ms fall 2 rise 2
+    server web01 {{ web01_ip }}:80 check inter 2000ms fall 2 rise 2 cookie web01
+    server web02 {{ web02_ip }}:80 check inter 2000ms fall 2 rise 2 cookie web02
 
 # ==============================================================================
 # Dashboard Monitoring Status Kluster (Stats Page untuk Guru & Siswa)

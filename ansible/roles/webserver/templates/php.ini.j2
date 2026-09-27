@@ -24,8 +24,9 @@ post_max_size = 20M
 upload_max_filesize = 10M
 default_socket_timeout = 60
 
-; Extensions Directory
-extension_dir = "ext"
+; Extensions Directory (Default Alpine Linux modules directory)
+; extension_dir is managed automatically by Alpine apk php modules
+; extension_dir = "/usr/lib/php8/modules"
 
 ; Required Extensions for KopDes
 extension=curl

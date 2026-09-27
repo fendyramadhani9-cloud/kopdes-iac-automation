@@ -289,19 +289,20 @@ function applyLocationUI(title, sub, locationVal, village, district, regency, pr
     if (pInput) pInput.value = province;
 
     if (badgeEl) {
+        badgeEl.removeAttribute('style');
         if (type === 'banyumas') {
             badgeEl.className = 'badge badge-active';
             badgeEl.innerHTML = '<span class="badge-dot badge-dot-success"></span> Desa Banyumas';
         } else if (type === 'sea') {
             badgeEl.className = 'badge badge-active';
             badgeEl.style.backgroundColor = 'var(--primary-50)';
-            badgeEl.style.color = 'var(--primary-800)';
-            badgeEl.innerHTML = '🌊 Kawasan Maritim';
+            badgeEl.style.color = '#065f46';
+            badgeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M2 12c.6 0 1.2.2 1.7.6 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 .5-.4 1.1-.6 1.7-.6M2 18c.6 0 1.2.2 1.7.6 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 .5-.4 1.1-.6 1.7-.6"></path></svg>Kawasan Maritim';
         } else {
             badgeEl.className = 'badge badge-inactive';
             badgeEl.style.backgroundColor = '#f1f5f9';
             badgeEl.style.color = '#475569';
-            badgeEl.innerHTML = '📍 Lokasi Custom Bebas';
+            badgeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Lokasi Custom Bebas';
         }
     }
 }
@@ -355,7 +356,7 @@ function tryReverseGeocode(lat, lng) {
 /**
  * Handler Preset Button
  */
-function presetMapLocation(key) {
+function presetMapLocation(key, evt) {
     const preset = LOCATION_PRESETS[key];
     if (!preset) return;
 
@@ -369,7 +370,7 @@ function presetMapLocation(key) {
     handleLocationSelected(preset.lat, preset.lng, preset);
 
     // Tandai tombol preset aktif
-    const clickedBtn = event?.currentTarget;
+    const clickedBtn = (evt && evt.currentTarget) ? evt.currentTarget : (typeof event !== 'undefined' && event?.currentTarget ? event.currentTarget : null);
     if (clickedBtn) {
         document.querySelectorAll('.map-chip').forEach(c => c.classList.remove('active'));
         clickedBtn.classList.add('active');

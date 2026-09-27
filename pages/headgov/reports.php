@@ -25,15 +25,25 @@ $sql = "
     LEFT JOIN users u ON k.manager_id = u.id
 ";
 
+$params = [];
+
 // Jika role MANAGER, batasi laporan hanya untuk KopDes miliknya
 if ($user['role'] === 'MANAGER') {
     $kopdes = get_manager_kopdes($user['id']);
     $kopdesId = $kopdes['id'] ?? 0;
-    $sql .= " WHERE k.id = {$kopdesId}";
+    // AUDIT-006: Gunakan prepared statement, bukan interpolasi string langsung
+    $sql .= " WHERE k.id = ?";
+    $params[] = $kopdesId;
 }
 
 $sql .= " ORDER BY total_turnover DESC";
-$reports = $pdo ? $pdo->query($sql)->fetchAll() : [];
+if ($pdo) {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $reports = $stmt->fetchAll();
+} else {
+    $reports = [];
+}
 
 // Hitung total agregat
 $grandTurnover = 0;

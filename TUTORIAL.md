@@ -296,6 +296,85 @@ Setelah selesai, periksa VMware Workstation di Host: ke-4 VM (`KopDes-17-HAProxy
 
 ---
 
+## 7.1 Tahap 5.1: Konfigurasi IP Statis pada Ke-4 VM Target (Wajib)
+
+> **Catatan Penting Integrasi Terraform & Guest OS**:  
+> Provider `elsudano/vmworkstation` bertugas mengkloning file `.vmx` pada level hypervisor. Ke-4 VM baru memerlukan penetapan IP statis agar sesuai dengan `ansible/inventory.ini` (`192.168.17.10`, `.11`, `.12`, `.13`).
+
+Buka console masing-masing VM di VMware Workstation, login sebagai `root` (password: `root`), lalu jalankan perintah sesuai perannya:
+
+#### 1. Pada VM HAProxy (`KopDes-17-HAProxy`):
+```sh
+cat <<'EOF' > /etc/network/interfaces
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 192.168.17.10
+    netmask 255.255.255.0
+    gateway 192.168.17.2
+EOF
+echo "haproxy-node" > /etc/hostname
+hostname -F /etc/hostname
+/etc/init.d/networking restart
+```
+
+#### 2. Pada VM Web01 (`KopDes-17-Web01`):
+```sh
+cat <<'EOF' > /etc/network/interfaces
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 192.168.17.11
+    netmask 255.255.255.0
+    gateway 192.168.17.2
+EOF
+echo "web01-node" > /etc/hostname
+hostname -F /etc/hostname
+/etc/init.d/networking restart
+```
+
+#### 3. Pada VM Web02 (`KopDes-17-Web02`):
+```sh
+cat <<'EOF' > /etc/network/interfaces
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 192.168.17.12
+    netmask 255.255.255.0
+    gateway 192.168.17.2
+EOF
+echo "web02-node" > /etc/hostname
+hostname -F /etc/hostname
+/etc/init.d/networking restart
+```
+
+#### 4. Pada VM DB01 (`KopDes-17-DB01`):
+```sh
+cat <<'EOF' > /etc/network/interfaces
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 192.168.17.13
+    netmask 255.255.255.0
+    gateway 192.168.17.2
+EOF
+echo "db01-node" > /etc/hostname
+hostname -F /etc/hostname
+/etc/init.d/networking restart
+```
+
+*(Tips: Jika Anda menggunakan nomor absen selain 17, Anda juga dapat menjalankan `./generate_inventory.sh <nomor_absen>` di folder `ansible/` agar subnet inventory otomatis sinkron).*
+
+---
+
 ## 8. Tahap 6: Manajemen Konfigurasi dan Deployment dengan Ansible
 
 Masih di dalam **VM Controller**, jalankan konfigurasi otomatis:

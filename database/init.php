@@ -279,7 +279,7 @@ $kopdesDataset = [
     ],
     [
         'id' => 2,
-        'name' => 'Kopdes Klahar Wetan Mandiri',
+        'name' => 'KopDes Wlahar Wetan Mandiri',
         'location' => 'Desa Wlahar Wetan, Kec. Kalibagor',
         'village_name' => 'Wlahar Wetan',
         'district_name' => 'Kalibagor',
@@ -511,8 +511,8 @@ foreach ($kopdesDataset as $kItem) {
         if ($targetId === 1 && !str_contains($currentName, 'Pajerukan')) {
             $finalName = 'KopDes Berkah Tani Pajerukan';
         }
-        if ($targetId === 2 && !str_contains(strtolower($currentName), 'klahar') && !str_contains(strtolower($currentName), 'wlahar')) {
-            $finalName = 'Kopdes Klahar Wetan Mandiri';
+        if ($targetId === 2 && (str_contains(strtolower($currentName), 'klahar') || !str_contains($currentName, 'KopDes Wlahar'))) {
+            $finalName = 'KopDes Wlahar Wetan Mandiri';
         }
 
         $upStmt = $pdo->prepare("
@@ -566,6 +566,64 @@ foreach ($kopdesDataset as $kItem) {
         ]);
     }
 }
+
+// -----------------------------------------------------
+// SEED MEMBERSHIPS, PRODUCTS, TRANSACTIONS (AUDIT-010)
+// -----------------------------------------------------
+output("Memeriksa dan menyinkronkan data seed memberships, products, dan transactions...", 'info');
+
+$defaultMemberships = [
+    [1, 1, 5, 'KOP01-20250001', 'active', '2025-01-19 09:00:00'],
+    [2, 1, 6, 'KOP01-20250002', 'active', '2025-01-21 10:30:00'],
+    [3, 2, 7, 'KOP02-20250001', 'active', '2025-01-23 11:15:00'],
+    [4, 3, 8, 'KOP03-20250001', 'active', '2025-01-26 14:00:00'],
+    [5, 1, 7, 'KOP01-20250003', 'active', '2025-01-28 16:30:00']
+];
+
+$defaultProducts = [
+    [1, 1, 'Pupuk Urea Non-Subsidi Granul', 'PRD-KT-001', 'Pertanian', 185000.00, 120, 'karung 50kg', 'available', '2025-01-12 12:00:00'],
+    [2, 1, 'Benih Padi Ciherang Unggul', 'PRD-KT-002', 'Pertanian', 65000.00, 85, 'kantong 5kg', 'available', '2025-01-12 12:30:00'],
+    [3, 1, 'Beras Pandan Wangi Super Desa', 'PRD-KT-003', 'Sembako', 145000.00, 50, 'karung 10kg', 'available', '2025-01-13 09:00:00'],
+    [4, 1, 'Minyak Goreng Kelapa Alami', 'PRD-KT-004', 'Sembako', 34000.00, 200, 'jerigen 2L', 'available', '2025-01-14 10:45:00'],
+    [5, 2, 'Gula Tebu Kristal Organik', 'PRD-KM-001', 'Sembako', 16500.00, 150, 'kg', 'available', '2025-01-15 11:00:00'],
+    [6, 2, 'Telur Ayam Kampung Asli', 'PRD-KM-002', 'Sembako', 32000.00, 60, 'tray 10 butir', 'available', '2025-01-16 13:20:00'],
+    [7, 2, 'Anyaman Keranjang Bambu Desa', 'PRD-KM-003', 'Kerajinan', 45000.00, 35, 'buah', 'available', '2025-01-17 15:00:00'],
+    [8, 3, 'Pakan Konsentrat Sapi Perah', 'PRD-KS-001', 'Peternakan', 220000.00, 40, 'karung 50kg', 'available', '2025-01-20 10:00:00'],
+    [9, 3, 'Susu Segar Murni Baturraden', 'PRD-KS-002', 'Peternakan', 18000.00, 75, 'liter', 'available', '2025-01-21 08:30:00'],
+    [10, 4, 'Gula Kelapa Organik Kristal', 'PRD-KC-001', 'Sembako', 28000.00, 90, 'kantong 1kg', 'available', '2025-01-26 10:00:00']
+];
+
+$defaultTransactions = [
+    [1, 'INV-20250120-001', 1, 5, 1, 'purchase', 2, 370000.00, 'completed', 'Pembelian 2 karung pupuk urea persiapan musim tanam.', '2025-01-20 10:15:00'],
+    [2, 'INV-20250121-002', 1, 5, 4, 'purchase', 3, 102000.00, 'completed', 'Minyak goreng kelapa untuk kebutuhan dapur desa.', '2025-01-21 14:30:00'],
+    [3, 'INV-20250122-003', 1, 6, 2, 'purchase', 4, 260000.00, 'completed', 'Benih padi ciherang untuk sawah blok barat.', '2025-01-22 09:40:00'],
+    [4, 'INV-20250123-004', 1, 6, 3, 'purchase', 1, 145000.00, 'completed', 'Beras pandan wangi konsumsi keluarga.', '2025-01-23 16:20:00'],
+    [5, 'INV-20250124-005', 2, 7, 5, 'purchase', 5, 82500.00, 'completed', 'Gula pasir kristal untuk warung makan.', '2025-01-24 11:05:00'],
+    [6, 'INV-20250125-006', 2, 7, 7, 'purchase', 2, 90000.00, 'completed', 'Keranjang bambu cinderamata desa.', '2025-01-25 15:50:00'],
+    [7, 'INV-20250126-007', 3, 8, 9, 'purchase', 5, 90000.00, 'completed', 'Susu murni segar langganan mingguan.', '2025-01-26 10:30:00'],
+    [8, 'INV-20250127-008', 1, 5, 3, 'purchase', 2, 290000.00, 'completed', 'Restock beras pandan wangi keluarga.', '2025-01-27 13:45:00']
+];
+
+$insertKeyword = ($connection === 'sqlite') ? 'INSERT OR IGNORE' : 'INSERT IGNORE';
+
+$stmtMem = $pdo->prepare("{$insertKeyword} INTO memberships (id, kopdes_id, user_id, member_number, status, joined_at) VALUES (?, ?, ?, ?, ?, ?)");
+foreach ($defaultMemberships as $m) {
+    $stmtMem->execute($m);
+}
+
+$stmtPrd = $pdo->prepare("{$insertKeyword} INTO products (id, kopdes_id, name, sku, category, price, stock, unit, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmtPrdUp = $pdo->prepare("UPDATE products SET name = ?, sku = ?, category = ?, price = ?, unit = ? WHERE id = ?");
+foreach ($defaultProducts as $p) {
+    $stmtPrd->execute($p);
+    $stmtPrdUp->execute([$p[2], $p[3], $p[4], $p[5], $p[7], $p[0]]);
+}
+
+$stmtTx = $pdo->prepare("{$insertKeyword} INTO transactions (id, invoice_code, kopdes_id, user_id, product_id, type, quantity, total_amount, status, notes, transaction_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+foreach ($defaultTransactions as $t) {
+    $stmtTx->execute($t);
+}
+
+output("Tabel memberships, products, dan transactions berhasil disinkronkan!", 'success');
 
 $totalKopdesFinal = (int)$pdo->query("SELECT COUNT(*) FROM kopdes")->fetchColumn();
 output("Total KopDes aktif saat ini: {$totalKopdesFinal} unit (15 slot awal Banyumas tersinkronisasi tanpa duplikat).", 'success');

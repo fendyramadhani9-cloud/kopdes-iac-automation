@@ -24,13 +24,13 @@ output "target_vms" {
     web01 = {
       name        = vmworkstation_vm.web01.denomination
       assigned_ip = "192.168.${var.student_id}.11"
-      role        = "Web Server 01 (Nginx/PHP + KopDes)"
+      role        = "Web Server 01 (PHP Web Server + KopDes)"
       vmx_path    = vmworkstation_vm.web01.path
     }
     web02 = {
       name        = vmworkstation_vm.web02.denomination
       assigned_ip = "192.168.${var.student_id}.12"
-      role        = "Web Server 02 (Nginx/PHP + KopDes)"
+      role        = "Web Server 02 (PHP Web Server + KopDes)"
       vmx_path    = vmworkstation_vm.web02.path
     }
     db01 = {

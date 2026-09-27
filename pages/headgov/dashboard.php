@@ -50,6 +50,38 @@ if ($pdo) {
         LIMIT 6
     ";
     $recentKopdes = $pdo->query($queryRecent)->fetchAll();
+
+    // AUDIT-019: Agregasi Dinamis 5 Bulan Terakhir untuk Grafik Dashboard
+    $connection = env('DB_CONNECTION', 'mysql');
+    $monthLabels = [];
+    $kopdesGrowthData = [];
+    $txVolumeData = [];
+
+    for ($i = 4; $i >= 0; $i--) {
+        $timestamp = strtotime("-{$i} month");
+        $monthDate = date('Y-m', $timestamp);
+        $monthName = date('M', $timestamp);
+        $monthLabels[] = $monthName;
+
+        // Pertumbuhan kumulatif KopDes sampai akhir bulan
+        $endOfMonth = date('Y-m-t 23:59:59', $timestamp);
+        $stmtK = $pdo->prepare("SELECT COUNT(*) FROM kopdes WHERE created_at <= ?");
+        $stmtK->execute([$endOfMonth]);
+        $kopdesGrowthData[] = (int)$stmtK->fetchColumn();
+
+        // Volume transaksi pada bulan terkait
+        if ($connection === 'sqlite') {
+            $stmtT = $pdo->prepare("SELECT COALESCE(SUM(total_amount), 0) FROM transactions WHERE strftime('%Y-%m', transaction_date) = ?");
+        } else {
+            $stmtT = $pdo->prepare("SELECT COALESCE(SUM(total_amount), 0) FROM transactions WHERE DATE_FORMAT(transaction_date, '%Y-%m') = ?");
+        }
+        $stmtT->execute([$monthDate]);
+        $txVolumeData[] = (float)$stmtT->fetchColumn();
+    }
+} else {
+    $monthLabels = ['Nov', 'Des', 'Jan', 'Feb', 'Mar'];
+    $kopdesGrowthData = [0, 0, 0, 0, 0];
+    $txVolumeData = [0, 0, 0, 0, 0];
 }
 
 require __DIR__ . '/../../includes/layout/header.php';
@@ -222,7 +254,7 @@ require __DIR__ . '/../../includes/layout/header.php';
                                 <?php if ($kd['status'] === 'active'): ?>
                                     <span class="badge badge-active"><span class="badge-dot badge-dot-success"></span> Aktif</span>
                                 <?php else: ?>
-                                    <span class="badge badge-inactive"><span class="badge-dot badge-dot-danger"></span> Non-Aktif</span>
+                                    <span class="badge badge-inactive"><span class="badge-dot badge-dot-danger"></span> Nonaktif</span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -243,11 +275,11 @@ require __DIR__ . '/../../includes/layout/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Render grafik pertumbuhan KopDes
-    renderLineChart('chartKopdesGrowth', [1, 2, 3, 4, <?= max(4, $totalKopdes) ?>], ['Nov', 'Des', 'Jan', 'Feb', 'Mar']);
+    // Render grafik pertumbuhan KopDes dinamis
+    renderLineChart('chartKopdesGrowth', <?= json_encode($kopdesGrowthData) ?>, <?= json_encode($monthLabels) ?>);
 
-    // Render grafik volume transaksi
-    renderBarChart('chartTransactionsVolume', [350000, 680000, 1150000, 920000, <?= max(500000, (int)$totalVolume) ?>], ['Nov', 'Des', 'Jan', 'Feb', 'Mar']);
+    // Render grafik volume transaksi dinamis
+    renderBarChart('chartTransactionsVolume', <?= json_encode($txVolumeData) ?>, <?= json_encode($monthLabels) ?>);
 });
 </script>
 

@@ -33,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($action === 'assign_manager') {
         $managerId = (int)($_POST['manager_id'] ?? 0);
         $newMgrId = ($managerId > 0) ? $managerId : null;
+        if ($newMgrId) {
+            // AUDIT-011: Lepaskan manager ini dari unit sebelumnya jika ada agar 1-to-1 konsisten
+            $pdo->prepare("UPDATE kopdes SET manager_id = NULL WHERE manager_id = ?")->execute([$newMgrId]);
+        }
         $stmt = $pdo->prepare("UPDATE kopdes SET manager_id = ? WHERE id = ?");
         $stmt->execute([$newMgrId, $kopdesId]);
         flash('success', 'Penugasan manager untuk KopDes berhasil diperbarui.');
@@ -101,7 +105,7 @@ require __DIR__ . '/../../includes/layout/header.php';
             <select name="status" class="form-control" style="max-width:180px;">
                 <option value="">-- Semua Status --</option>
                 <option value="active" <?= $statusFilter === 'active' ? 'selected' : '' ?>>Aktif</option>
-                <option value="inactive" <?= $statusFilter === 'inactive' ? 'selected' : '' ?>>Non-Aktif</option>
+                <option value="inactive" <?= $statusFilter === 'inactive' ? 'selected' : '' ?>>Nonaktif</option>
             </select>
 
             <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
@@ -179,7 +183,7 @@ require __DIR__ . '/../../includes/layout/header.php';
                                 <?php if ($kd['status'] === 'active'): ?>
                                     <span class="badge badge-active"><span class="badge-dot badge-dot-success"></span>Aktif</span>
                                 <?php else: ?>
-                                    <span class="badge badge-inactive"><span class="badge-dot badge-dot-danger"></span>Non-Aktif</span>
+                                    <span class="badge badge-inactive"><span class="badge-dot badge-dot-danger"></span>Nonaktif</span>
                                 <?php endif; ?>
                             </td>
                             <td>

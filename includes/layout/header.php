@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../icons.php';
+require_once __DIR__ . '/../csrf.php';
 $nodeInfo = get_active_node_info();
 $user = current_user();
 $pageTitle = $pageTitle ?? 'Dashboard';
@@ -44,12 +45,20 @@ $pageTitle = $pageTitle ?? 'Dashboard';
 
             <div class="topbar-right">
                 <!-- Live Server / Load Balancer Indicator -->
-                <a href="index.php?page=infrastructure" class="node-pill" title="Klik untuk membuka panel infrastruktur HAProxy & Node Cluster">
-                    <span class="node-dot"></span>
-                    <span class="node-label">Server:</span>
-                    <strong class="node-name"><?= e($nodeInfo['node_name']) ?></strong>
-                    <span class="node-host">(<?= e($nodeInfo['hostname']) ?>)</span>
-                </a>
+                <?php if (has_role('HEAD_GOV')): ?>
+                    <a href="index.php?page=infrastructure" class="node-pill" title="Klik untuk membuka panel infrastruktur HAProxy & Node Cluster">
+                        <span class="node-dot"></span>
+                        <span class="node-label">Server:</span>
+                        <strong class="node-name"><?= e($nodeInfo['node_name']) ?></strong>
+                        <span class="node-host">(<?= e($nodeInfo['hostname']) ?>)</span>
+                    </a>
+                <?php else: ?>
+                    <div class="node-pill" title="Server Node Aktif">
+                        <span class="node-dot"></span>
+                        <span class="node-label">Server:</span>
+                        <strong class="node-name"><?= e($nodeInfo['node_name']) ?></strong>
+                    </div>
+                <?php endif; ?>
 
                 <?php if (has_role('HEAD_GOV')): ?>
                     <button type="button" class="btn btn-primary btn-sm btn-spawn-trigger" onclick="openSpawnModal()">
@@ -69,9 +78,12 @@ $pageTitle = $pageTitle ?? 'Dashboard';
                             <?= e($user['role'] ?? 'CITIZEN') ?>
                         </span>
                     </div>
-                    <a href="index.php?page=logout" class="btn-logout-icon" title="Keluar dari sesi (Logout)">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                    </a>
+                    <form action="index.php?page=logout" method="POST" style="display:inline;margin:0;padding:0;">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn-logout-icon" title="Keluar dari sesi (Logout)" aria-label="Keluar dari sesi (Logout)" style="background:none;border:none;cursor:pointer;padding:6px;display:inline-flex;align-items:center;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </form>
                 </div>
             </div>
         </header>

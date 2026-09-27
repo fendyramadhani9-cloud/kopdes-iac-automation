@@ -63,19 +63,19 @@ if ($role === 'HEAD_GOV') {
                         <!-- Quick Presets -->
                         <div class="map-preset-chips">
                             <span class="map-preset-label">Preset:</span>
-                            <button type="button" class="map-chip" onclick="presetMapLocation('pajerukan')">📍 Pajerukan</button>
-                            <button type="button" class="map-chip" onclick="presetMapLocation('wlahar')">📍 Wlahar Wetan</button>
-                            <button type="button" class="map-chip" onclick="presetMapLocation('baturraden')">📍 Baturraden</button>
-                            <button type="button" class="map-chip" onclick="presetMapLocation('jakarta')">🏙️ Jakarta</button>
-                            <button type="button" class="map-chip" onclick="presetMapLocation('papua')">🏝️ Papua</button>
-                            <button type="button" class="map-chip" onclick="presetMapLocation('laut_jawa')">🌊 Tengah Laut Jawa</button>
+                            <button type="button" class="map-chip" onclick="presetMapLocation('pajerukan', event)"><?= ui_icon('location', '', 14) ?> Pajerukan</button>
+                            <button type="button" class="map-chip" onclick="presetMapLocation('wlahar', event)"><?= ui_icon('location', '', 14) ?> Wlahar Wetan</button>
+                            <button type="button" class="map-chip" onclick="presetMapLocation('baturraden', event)"><?= ui_icon('location', '', 14) ?> Baturraden</button>
+                            <button type="button" class="map-chip" onclick="presetMapLocation('jakarta', event)"><?= ui_icon('building', '', 14) ?> Jakarta</button>
+                            <button type="button" class="map-chip" onclick="presetMapLocation('papua', event)"><?= ui_icon('island', '', 14) ?> Papua</button>
+                            <button type="button" class="map-chip" onclick="presetMapLocation('laut_jawa', event)"><?= ui_icon('waves', '', 14) ?> Tengah Laut Jawa</button>
                         </div>
 
                         <!-- Map Frame -->
                         <div class="spawn-map-wrapper">
                             <div id="spawnMap"></div>
                             <div class="spawn-map-hint">
-                                <span>🖱️ Klik pada peta untuk memilih titik lokasi mana pun</span>
+                                <span><?= ui_icon('mouse', '', 14) ?> Klik pada peta untuk memilih titik lokasi mana pun</span>
                                 <span id="mapZoomStatus" style="opacity:0.85;">Peta Interaktif</span>
                             </div>
                         </div>
@@ -146,7 +146,7 @@ if ($role === 'HEAD_GOV') {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-celebration">
             <div class="celebration-badge"><?= ui_icon('trophy') ?></div>
-            <h2 class="celebration-title">🎉 Anda berhasil men-spawn KopDes!</h2>
+            <h2 class="celebration-title">Anda Berhasil Men-spawn KopDes!</h2>
             <div class="celebration-body">
                 <p class="celebration-statement">
                     KopDes <strong id="successKopdesName" class="highlight-entity">Nama KopDes</strong> telah berhasil di-spawn di <strong id="successKopdesLocation" class="highlight-location">Lokasi</strong>.

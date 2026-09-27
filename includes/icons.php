@@ -6,9 +6,23 @@
 
 if (!function_exists('ui_icon')) {
     function ui_icon(string $name, string $class = '', int $size = 24): string {
-        $attrs = 'width="' . $size . '" height="' . $size . '" class="' . htmlspecialchars($class, ENT_QUOTES) . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+        $extraAttr = '';
+        if (!empty($class)) {
+            if (str_contains($class, ':')) {
+                $extraAttr = ' style="' . htmlspecialchars($class, ENT_QUOTES) . '"';
+            } else {
+                $extraAttr = ' class="' . htmlspecialchars($class, ENT_QUOTES) . '"';
+            }
+        }
+        $attrs = 'width="' . $size . '" height="' . $size . '"' . $extraAttr . ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
         return match ($name) {
+            'clock', 'time', 'history' => <<<SVG
+<svg {$attrs}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="12 6 12 12 16 14"></polyline>
+</svg>
+SVG,
             // Stat Card Icons
             'kopdes', 'store' => <<<SVG
 <svg {$attrs}>
@@ -128,6 +142,31 @@ SVG,
 <svg {$attrs}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
     <circle cx="12" cy="7" r="4"></circle>
+</svg>
+SVG,
+            'building', 'city' => <<<SVG
+<svg {$attrs}>
+    <line x1="18" y1="20" x2="18" y2="10"></line>
+    <line x1="12" y1="20" x2="12" y2="4"></line>
+    <line x1="6" y1="20" x2="6" y2="14"></line>
+    <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+</svg>
+SVG,
+            'waves', 'sea' => <<<SVG
+<svg {$attrs}>
+    <path d="M2 12c.6 0 1.2.2 1.7.6 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 .5-.4 1.1-.6 1.7-.6M2 18c.6 0 1.2.2 1.7.6 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 1 .9 2.6.9 3.6 0 1-.9 2.6-.9 3.6 0 .5-.4 1.1-.6 1.7-.6"></path>
+</svg>
+SVG,
+            'island', 'compass' => <<<SVG
+<svg {$attrs}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+</svg>
+SVG,
+            'mouse' => <<<SVG
+<svg {$attrs}>
+    <rect x="6" y="3" width="12" height="18" rx="6"></rect>
+    <line x1="12" y1="7" x2="12" y2="11"></line>
 </svg>
 SVG,
             'trophy' => <<<SVG

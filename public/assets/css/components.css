@@ -356,7 +356,7 @@
 
 .badge-active, .badge-completed, .badge-available {
     background-color: var(--color-success-bg);
-    color: var(--primary-800);
+    color: #065f46;
     border: 1px solid var(--color-success-border);
 }
 

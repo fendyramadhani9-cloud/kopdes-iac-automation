@@ -82,8 +82,8 @@ http_response_code(404);
 $pageTitle = 'Halaman Tidak Ditemukan';
 require __DIR__ . '/../includes/layout/header.php';
 ?>
-<div class="card">
-    <div class="card-body">
+<div class="card" style="min-height: 55vh; display: flex; align-items: center; justify-content: center;">
+    <div class="card-body" style="width: 100%;">
         <div class="empty-state">
             <div class="empty-icon-wrap" style="color:var(--color-primary);"><?= ui_icon('search', '', 48) ?></div>
             <h2 class="empty-title">404 - Halaman Tidak Ditemukan</h2>

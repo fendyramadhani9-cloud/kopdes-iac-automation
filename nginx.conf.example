@@ -52,7 +52,7 @@ server {
         deny all;
     }
 
-    location ~* \.(sql|env|log|md|sh)$ {
+    location ~* \.(sql|sqlite|sqlite3|db|env|log|md|sh)$ {
         deny all;
     }
 

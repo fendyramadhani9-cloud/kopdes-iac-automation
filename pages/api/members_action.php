@@ -32,6 +32,15 @@ if ($action === 'join_kopdes') {
     // Citizen mendaftar ke KopDes
     $kopdesId = (int)($_POST['kopdes_id'] ?? 0);
 
+    // AUDIT-003: Cek status KopDes
+    $checkKop = $pdo->prepare("SELECT id, status FROM kopdes WHERE id = ?");
+    $checkKop->execute([$kopdesId]);
+    $kop = $checkKop->fetch();
+    if (!$kop || $kop['status'] !== 'active') {
+        flash('error', 'Koperasi Desa ini sedang nonaktif. Pendaftaran anggota tidak dapat diproses.');
+        redirect("index.php?page=kopdes-detail&id={$kopdesId}");
+    }
+
     // Cek apakah sudah terdaftar
     $check = $pdo->prepare("SELECT id, status FROM memberships WHERE kopdes_id = ? AND user_id = ?");
     $check->execute([$kopdesId, $user['id']]);
@@ -61,6 +70,24 @@ if ($action === 'join_kopdes') {
     if (empty($kopdesId) || empty($userId)) {
         flash('error', 'Data anggota dan KopDes wajib dipilih.');
         redirect('index.php?page=members');
+    }
+
+    // AUDIT-003: Cek status KopDes
+    $checkKop = $pdo->prepare("SELECT id, status FROM kopdes WHERE id = ?");
+    $checkKop->execute([$kopdesId]);
+    $kop = $checkKop->fetch();
+    if (!$kop || $kop['status'] !== 'active') {
+        flash('error', 'Koperasi Desa ini sedang nonaktif. Penambahan anggota tidak dapat diproses.');
+        redirect('index.php?page=members');
+    }
+
+    // AUDIT-004: Validasi kepemilikan unit - Manager hanya boleh menambah anggota ke KopDes miliknya
+    if (has_role('MANAGER')) {
+        $managerKopdes = get_manager_kopdes($user['id']);
+        if (!$managerKopdes || (int)$managerKopdes['id'] !== $kopdesId) {
+            flash('error', 'Anda tidak memiliki wewenang untuk menambah anggota ke unit ini.');
+            redirect('index.php?page=members');
+        }
     }
 
     $check = $pdo->prepare("SELECT id FROM memberships WHERE kopdes_id = ? AND user_id = ?");

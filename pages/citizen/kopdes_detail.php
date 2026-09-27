@@ -87,7 +87,12 @@ require __DIR__ . '/../../includes/layout/header.php';
         <!-- Join / Membership Status Area -->
         <div style="min-width:240px;background:var(--slate-50);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:18px;text-align:center;">
             <?php if ($user['role'] === 'CITIZEN'): ?>
-                <?php if ($isMember): ?>
+                <?php if ($kopdes['status'] !== 'active'): ?>
+                    <div style="color:var(--color-danger);display:flex;justify-content:center;margin-bottom:8px;"><?= ui_icon('alert-circle', '', 36) ?></div>
+                    <strong style="color:var(--slate-900);display:block;">Unit Nonaktif</strong>
+                    <span class="badge badge-inactive" style="margin:6px 0;">Operasional Tutup</span>
+                    <p style="font-size:0.75rem;color:var(--slate-500);margin-top:4px;">Koperasi Desa ini berstatus nonaktif sehingga pendaftaran anggota baru ditutup sementara.</p>
+                <?php elseif ($isMember): ?>
                     <div style="color:var(--color-success);display:flex;justify-content:center;margin-bottom:8px;"><?= ui_icon('check', '', 36) ?></div>
                     <strong style="color:var(--slate-900);display:block;">Anggota Terverifikasi</strong>
                     <span class="badge badge-active" style="margin:6px 0;"><?= e($memberNumber) ?></span>
@@ -96,10 +101,10 @@ require __DIR__ . '/../../includes/layout/header.php';
                     <div style="color:var(--primary-700);display:flex;justify-content:center;margin-bottom:8px;"><?= ui_icon('handshake', '', 36) ?></div>
                     <strong style="color:var(--slate-900);display:block;">Belum Bergabung</strong>
                     <p style="font-size:0.75rem;color:var(--slate-500);margin:6px 0 14px;">Daftar gratis untuk mendapatkan harga anggota dan layanan simpan pinjam desa.</p>
-                    <form method="POST" action="index.php?page=api-members-action">
+                    <form id="joinForm" method="POST" action="index.php?page=api-members-action">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="join_kopdes">
-                        <input type="hidden" name="kopdes_id" value="<?= $kopdes['id'] ?>">
+                        <input type="hidden" name="kopdes_id" value="<?= (int)$kopdes['id'] ?>">
                         <button type="submit" class="btn btn-primary btn-block">
                             Daftar Jadi Anggota
                         </button>
@@ -162,8 +167,14 @@ require __DIR__ . '/../../includes/layout/header.php';
 
                 <div class="card-footer">
                     <?php if ($user['role'] === 'CITIZEN'): ?>
-                        <?php if ($p['status'] === 'available' && $p['stock'] > 0): ?>
-                            <button type="button" class="btn btn-primary btn-block btn-sm" onclick='openBuyModal(<?= json_encode($p) ?>)'>
+                        <?php if ($kopdes['status'] !== 'active'): ?>
+                            <button type="button" class="btn btn-secondary btn-block btn-sm" disabled>Unit Koperasi Nonaktif</button>
+                        <?php elseif (!$isMember): ?>
+                            <button type="button" class="btn btn-secondary btn-block btn-sm" onclick="document.getElementById('joinForm')?.scrollIntoView({behavior:'smooth'}); document.querySelector('#joinForm button')?.focus();" title="Bergabung sebagai anggota untuk dapat berbelanja">
+                                <?= ui_icon('handshake', '', 14) ?> Daftar Anggota untuk Membeli
+                            </button>
+                        <?php elseif ($p['status'] === 'available' && $p['stock'] > 0): ?>
+                            <button type="button" class="btn btn-primary btn-block btn-sm" onclick='openBuyModal(<?= htmlspecialchars(json_encode($p, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8') ?>)'>
                                 Beli / Pesan Sekarang
                             </button>
                         <?php else: ?>

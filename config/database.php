@@ -86,4 +86,14 @@ class Database {
     public static function isConnected(): bool {
         return self::getConnection() !== null;
     }
+
+    public static function getDriver(): string {
+        $pdo = self::getConnection();
+        if ($pdo) {
+            try {
+                return (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            } catch (Exception $e) {}
+        }
+        return env('DB_CONNECTION', 'mysql');
+    }
 }
