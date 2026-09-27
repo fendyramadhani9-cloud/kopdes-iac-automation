@@ -101,7 +101,7 @@ Setiap komponen dalam repository memiliki batasan fungsi yang jelas:
 | **Terraform** | Mengelola siklus hidup Virtual Machine: cloning dari template base Alpine Linux, alokasi vCPU, memori RAM, konfigurasi adapter jaringan, dan pembuatan disk virtual. | Tidak menginstal paket software, tidak mengonfigurasi database, dan tidak menginjeksi environment runtime. |
 | **Ansible** | Orkestrasi pasca-booting: instalasi paket via `apk`, inisialisasi database MariaDB, deployment source code ke `/var/www/kopdes`, registrasi OpenRC service, dan injeksi `.env`. | Tidak bertanggung jawab atas pembuatan atau penghapusan VM pada level hypervisor. |
 | **Aplikasi Web** | Menjalankan logika bisnis platform koperasi: autentikasi, manajemen katalog, transaksi kasir, dan penentuan koordinat lokasi unit usaha. | Source code aplikasi terisolasi dari perkakas deployment dan hypervisor. |
-| **Base Virtual Machine** | Template gold image Alpine Linux (~145 MB) dengan OpenSSH aktif dan kredensial root standar. | Hanya berfungsi sebagai sumber cloning (read-only) dan tidak melayani traffic aplikasi secara langsung. |
+| **Base Virtual Machine** | Template gold image Alpine Linux (~145 MB) dengan OpenSSH aktif dan kredensial standar `alpine:alpine`. | Hanya berfungsi sebagai sumber cloning (read-only) dan tidak melayani traffic aplikasi secara langsung. |
 
 ---
 

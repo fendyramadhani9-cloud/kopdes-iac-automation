@@ -3,11 +3,11 @@
 # Helper Script: Konfigurasi IP Statis & Hostname Alpine Linux Guest VM
 # Usage: ./setup_vm_network.sh <ROLE> <STUDENT_ID> [GATEWAY_HOST_ID]
 # Role options: haproxy (10), web01 (11), web02 (12), db01 (13)
-# Example: ./setup_vm_network.sh web01 17
+# Example: ./setup_vm_network.sh web01 16
 # ==============================================================================
 
 ROLE="$1"
-STUDENT_ID="${2:-17}"
+STUDENT_ID="${2:-16}"
 GW_ID="${3:-2}"
 
 if [ -z "$ROLE" ]; then

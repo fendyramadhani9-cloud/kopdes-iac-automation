@@ -9,16 +9,16 @@
 variable "student_id" {
   description = "Nomor absen siswa (variabel X) yang menentukan alokasi subnet IP (192.168.X.0/24)"
   type        = number
-  default     = 17
+  default     = 16
 }
 
 # =====================================================
 # VMware Workstation REST API (vmrest) Configuration
 # =====================================================
 variable "vmws_url" {
-  description = "URL endpoint VMware Workstation REST API (vmrest). Contoh: http://192.168.17.1:8697/api atau http://localhost:8697/api"
+  description = "URL endpoint VMware Workstation REST API (vmrest). Contoh: http://192.168.16.1:8697/api atau http://localhost:8697/api"
   type        = string
-  default     = "http://192.168.17.1:8697/api"
+  default     = "http://192.168.16.1:8697/api"
 }
 
 variable "vmws_user" {

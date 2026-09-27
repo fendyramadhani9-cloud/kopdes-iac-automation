@@ -190,7 +190,7 @@ Kembali ke terminal **VM Controller (Alpine Linux)**, jalankan:
 ```sh
 curl -u admin:PasswordKopdes2025! http://<IP_HOST_WINDOWS>:8697/api/vms
 ```
-*(Ganti `<IP_HOST_WINDOWS>` dengan IP adapter VMware Host Anda, misalnya `192.168.17.1`).*
+*(Ganti `<IP_HOST_WINDOWS>` dengan IP adapter VMware Host Anda, misalnya `192.168.16.1`).*
 
 Output JSON akan menampilkan daftar VM:
 ```json
@@ -216,11 +216,11 @@ nano terraform/terraform.tfvars
 
 Periksa dan sesuaikan:
 ```hcl
-# Nomor subnet absen
-student_id = 17
+# Nomor subnet absen (contoh absen 16)
+student_id = 16
 
 # Endpoint vmrest di Host Windows
-vmws_url      = "http://192.168.17.1:8697/api"
+vmws_url      = "http://192.168.16.1:8697/api"
 vmws_user     = "admin"
 vmws_password = "PasswordKopdes2025!"
 vmws_https    = false
@@ -244,14 +244,14 @@ nano ansible/inventory.ini
 Pastikan IP target menggunakan nomor subnet yang sama:
 ```ini
 [haproxy]
-haproxy-node ansible_host=192.168.17.10
+haproxy-node ansible_host=192.168.16.10
 
 [webservers]
-web01-node ansible_host=192.168.17.11 server_node_name=WEB-01
-web02-node ansible_host=192.168.17.12 server_node_name=WEB-02
+web01-node ansible_host=192.168.16.11 server_node_name=WEB-01
+web02-node ansible_host=192.168.16.12 server_node_name=WEB-02
 
 [database]
-db01-node ansible_host=192.168.17.13
+db01-node ansible_host=192.168.16.13
 
 [alpine:children]
 haproxy
@@ -259,12 +259,15 @@ webservers
 database
 
 [alpine:vars]
-ansible_user=root
-ansible_password=root
+ansible_user=alpine
+ansible_password=alpine
 ansible_connection=ssh
 ansible_port=22
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 ansible_python_interpreter=/usr/bin/python3
+ansible_become=yes
+ansible_become_method=sudo
+ansible_become_password=alpine
 ```
 
 ---
@@ -299,11 +302,11 @@ Setelah selesai, periksa VMware Workstation di Host: ke-4 VM (`KopDes-17-HAProxy
 ## 7.1 Tahap 5.1: Konfigurasi IP Statis pada Ke-4 VM Target (Wajib)
 
 > **Catatan Penting Integrasi Terraform & Guest OS**:  
-> Provider `elsudano/vmworkstation` bertugas mengkloning file `.vmx` pada level hypervisor. Ke-4 VM baru memerlukan penetapan IP statis agar sesuai dengan `ansible/inventory.ini` (`192.168.17.10`, `.11`, `.12`, `.13`).
+> Provider `elsudano/vmworkstation` bertugas mengkloning file `.vmx` pada level hypervisor. Ke-4 VM baru memerlukan penetapan IP statis agar sesuai dengan `ansible/inventory.ini` (`192.168.16.10`, `.11`, `.12`, `.13`).
 
-Buka console masing-masing VM di VMware Workstation, login sebagai `root` (password: `root`), lalu jalankan perintah sesuai perannya:
+Buka console masing-masing VM di VMware Workstation, login sebagai `alpine` (password: `alpine` atau gunakan `sudo`), lalu jalankan perintah sesuai perannya (atau gunakan helper script `./setup_vm_network.sh <role> 16`):
 
-#### 1. Pada VM HAProxy (`KopDes-17-HAProxy`):
+#### 1. Pada VM HAProxy (`KopDes-16-HAProxy`):
 ```sh
 cat <<'EOF' > /etc/network/interfaces
 auto lo
@@ -311,16 +314,16 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-    address 192.168.17.10
+    address 192.168.16.10
     netmask 255.255.255.0
-    gateway 192.168.17.2
+    gateway 192.168.16.2
 EOF
 echo "haproxy-node" > /etc/hostname
 hostname -F /etc/hostname
 /etc/init.d/networking restart
 ```
 
-#### 2. Pada VM Web01 (`KopDes-17-Web01`):
+#### 2. Pada VM Web01 (`KopDes-16-Web01`):
 ```sh
 cat <<'EOF' > /etc/network/interfaces
 auto lo
@@ -328,16 +331,16 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-    address 192.168.17.11
+    address 192.168.16.11
     netmask 255.255.255.0
-    gateway 192.168.17.2
+    gateway 192.168.16.2
 EOF
 echo "web01-node" > /etc/hostname
 hostname -F /etc/hostname
 /etc/init.d/networking restart
 ```
 
-#### 3. Pada VM Web02 (`KopDes-17-Web02`):
+#### 3. Pada VM Web02 (`KopDes-16-Web02`):
 ```sh
 cat <<'EOF' > /etc/network/interfaces
 auto lo
@@ -345,16 +348,16 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-    address 192.168.17.12
+    address 192.168.16.12
     netmask 255.255.255.0
-    gateway 192.168.17.2
+    gateway 192.168.16.2
 EOF
 echo "web02-node" > /etc/hostname
 hostname -F /etc/hostname
 /etc/init.d/networking restart
 ```
 
-#### 4. Pada VM DB01 (`KopDes-17-DB01`):
+#### 4. Pada VM DB01 (`KopDes-16-DB01`):
 ```sh
 cat <<'EOF' > /etc/network/interfaces
 auto lo
@@ -362,16 +365,16 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-    address 192.168.17.13
+    address 192.168.16.13
     netmask 255.255.255.0
-    gateway 192.168.17.2
+    gateway 192.168.16.2
 EOF
 echo "db01-node" > /etc/hostname
 hostname -F /etc/hostname
 /etc/init.d/networking restart
 ```
 
-*(Tips: Jika Anda menggunakan nomor absen selain 17, Anda juga dapat menjalankan `./generate_inventory.sh <nomor_absen>` di folder `ansible/` agar subnet inventory otomatis sinkron).*
+*(Tips: Jika Anda menggunakan nomor absen selain 16, Anda juga dapat menjalankan `./generate_inventory.sh <nomor_absen>` di folder `ansible/` agar subnet inventory otomatis sinkron).*
 
 ---
 
@@ -406,7 +409,7 @@ Playbook akan mengeksekusi secara otomatis:
 ### 9.1 Akses Website KopDes
 Buka browser dari Host PC Anda:
 ```text
-http://192.168.17.10/
+http://192.168.16.10/
 ```
 Website KopDes Merah Putih akan tampil langsung melalui load balancer HAProxy.
 
@@ -416,7 +419,7 @@ Perhatikan label **Server Node** di topbar kanan atas:
 - Verifikasi juga dapat dijalankan langsung dari terminal Controller:
   ```sh
   for i in {1..4}; do
-      curl -s "http://192.168.17.10/index.php?page=login" | grep -o 'WEB-0[12]'
+      curl -s "http://192.168.16.10/index.php?page=login" | grep -o 'WEB-0[12]'
       sleep 1
   done
   ```
@@ -424,7 +427,7 @@ Perhatikan label **Server Node** di topbar kanan atas:
 ### 9.3 Dashboard Pemantauan HAProxy
 Buka dashboard statistik di browser:
 ```text
-http://192.168.17.10:8404/
+http://192.168.16.10:8404/
 ```
 Kedua node backend (`web01` dan `web02`) berstatus **hijau (`UP`)**.
 
@@ -442,8 +445,8 @@ Kedua node backend (`web01` dan `web02`) berstatus **hijau (`UP`)**.
    ```sh
    ansible web01-node -m command -a "rc-service kopdes stop"
    ```
-2. **Cek Dashboard HAProxy** (`http://192.168.17.10:8404/`): Status `web01` otomatis berubah menjadi **merah (`DOWN`)**.
-3. **Akses Website**: Refresh `http://192.168.17.10/`. Website tetap berjalan tanpa kendala karena dialihkan 100% ke `WEB-02`.
+2. **Cek Dashboard HAProxy** (`http://192.168.16.10:8404/`): Status `web01` otomatis berubah menjadi **merah (`DOWN`)**.
+3. **Akses Website**: Refresh `http://192.168.16.10/`. Website tetap berjalan tanpa kendala karena dialihkan 100% ke `WEB-02`.
 4. **Pulihkan Layanan (Self-Healing)**:
    ```sh
    ansible web01-node -m command -a "rc-service kopdes start"

@@ -5,7 +5,7 @@
 # WAJIB DIUBAH SISWA
 # GANTI X / NOMOR ABSEN SESUAI NOMOR ABSEN ANDA
 # =====================================================
-student_id = 17
+student_id = 16
 
 # =====================================================
 # Kredensial VMware Workstation REST API (vmrest)
@@ -13,7 +13,7 @@ student_id = 17
 #   vmrest.exe -C (untuk set username/password)
 #   vmrest.exe -p 8697
 # =====================================================
-vmws_url      = "http://192.168.17.1:8697/api"
+vmws_url      = "http://192.168.16.1:8697/api"
 vmws_user     = "admin"
 vmws_password = "PasswordKopdes2025!"
 vmws_https    = false

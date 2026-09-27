@@ -7,7 +7,7 @@
 # WAJIB DIUBAH SISWA
 # GANTI X / NOMOR ABSEN SESUAI ABSEN ANDA
 # =====================================================
-student_id: 17
+student_id: 16
 network_prefix: "192.168.{{ student_id }}"
 
 # Alokasi IP Statis 4 Target VM

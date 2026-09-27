@@ -15,7 +15,7 @@ elif [ -f "$ALL_VARS" ]; then
     STUDENT_ID=$(grep -E "^student_id:" "$ALL_VARS" | awk '{print $2}' | tr -d '\r')
 fi
 
-STUDENT_ID="${STUDENT_ID:-17}"
+STUDENT_ID="${STUDENT_ID:-16}"
 
 echo "Generating ansible/inventory.ini for student_id: ${STUDENT_ID}..."
 
@@ -44,12 +44,15 @@ webservers
 database
 
 [alpine:vars]
-ansible_user=root
-ansible_password=root
+ansible_user=alpine
+ansible_password=alpine
 ansible_connection=ssh
 ansible_port=22
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 ansible_python_interpreter=/usr/bin/python3
+ansible_become=yes
+ansible_become_method=sudo
+ansible_become_password=alpine
 EOF
 
 echo "ansible/inventory.ini successfully updated with subnet 192.168.${STUDENT_ID}.X!"
